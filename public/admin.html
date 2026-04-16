@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZCLAP Admin</title>
+  <style>
+    :root {
+      --orange: #e8490f;
+      --dark: #1a1a1a;
+      --mid: #555555;
+      --bg: #f7f6f2;
+      --card: #ffffff;
+      --border: #e0ded8;
+      --green: #0f7a32;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --dark: #f3f4f6;
+        --mid: #b7bdc7;
+        --bg: #0f1216;
+        --card: #171c22;
+        --border: #2a3038;
+        --green: #7fd9a1;
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; background: var(--bg); color: var(--dark); }
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      height: 60px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .brand { font-weight: 700; letter-spacing: .02em; }
+    .toolbar { display: flex; align-items: center; gap: 12px; color: var(--mid); font-size: 13px; }
+    .btn { border: 1px solid var(--border); background: var(--card); height: 34px; padding: 0 12px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-approve { border: 0; background: var(--orange); color: #fff; height: 32px; padding: 0 12px; border-radius: 8px; cursor: pointer; font-size: 12px; font-weight: 600; }
+    main { max-width: 1040px; margin: 24px auto; padding: 0 16px 30px; }
+    h1 { margin: 0 0 8px; font-size: 26px; }
+    .sub { color: var(--mid); margin-bottom: 20px; }
+    .tabs { display: flex; gap: 8px; margin-bottom: 18px; }
+    .tab { border: 1px solid var(--border); background: var(--card); border-radius: 999px; padding: 8px 14px; font-size: 13px; cursor: pointer; color: var(--mid); }
+    .tab.active { border-color: var(--orange); color: var(--orange); background: #fff4ef; }
+    .list { display: grid; gap: 12px; }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+    .row { display: flex; flex-wrap: wrap; gap: 14px; margin: 6px 0; font-size: 13px; color: var(--mid); }
+    .top-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+    .status, .status-email { display: inline-block; border-radius: 999px; padding: 3px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; }
+    .status.pending { background: #fff3db; color: #8a5a00; }
+    .status.done { background: #e8f7ed; color: var(--green); }
+    .status-email.queued { background: #e9f2ff; color: #185fa5; }
+    .status-email.not_sent { background: #fff3db; color: #8a5a00; }
+    .status-email.sent { background: #e8f7ed; color: var(--green); }
+    .status-email.undelivered { background: #fcebeb; color: #a32d2d; }
+    .email-error {
+      color: #a32d2d;
+      font-size: 12px;
+      margin-top: 2px;
+    }
+    .empty { color: var(--mid); font-size: 14px; background: var(--card); border: 1px dashed var(--border); border-radius: 12px; padding: 18px; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">ZCLAP Admin</div>
+    <div class="toolbar">
+      <span id="whoami">Checking session...</span>
+      <button class="btn" id="logout-btn">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <h1>Estimator Requests</h1>
+    <div class="sub">Pending and completed approval queue.</div>
+
+    <div class="tabs">
+      <button class="tab active" data-tab="pending">Pending</button>
+      <button class="tab" data-tab="done">Done</button>
+    </div>
+    <div id="pending-list" class="list"></div>
+    <div id="done-list" class="list" style="display:none"></div>
+  </main>
+
+  <script>
+    let data = { pending: [], done: [] };
+    const esc = (v) => String(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+
+    async function requireSession() {
+      const res = await fetch("/api/admin/session");
+      if (!res.ok) { window.location.href = "/admin/login"; return null; }
+      const body = await res.json();
+      document.getElementById("whoami").textContent = body.user.email;
+      return body.user;
+    }
+
+    function requestCard(item) {
+      const created = new Date(item.createdAt).toLocaleString();
+      const approvedAt = item.approvedAt ? new Date(item.approvedAt).toLocaleString() : "-";
+      const source = item.source || {};
+      const user = item.user || {};
+      const approveBtn = item.status === "pending" ? `<button class="btn-approve" data-approve-id="${esc(item.id)}">Approve</button>` : "";
+      const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
+      const emailStatus = item.emailStatus || "queued";
+      const emailErrorMeta = emailStatus === "undelivered" && item.emailError
+        ? `<div class="row"><span class="email-error">Delivery error: ${esc(item.emailError)}</span></div>`
+        : "";
+      return `<article class="card">
+        <div class="top-row">
+          <div><span class="status ${esc(item.status)}">${esc(item.status)}</span><strong style="margin-left:8px">${esc(item.id)}</strong></div>
+          ${approveBtn}
+        </div>
+        <div class="row"><span><strong>${esc(user.firstName || "")} ${esc(user.lastName || "")}</strong></span><span>${esc(user.company || "-")}</span><span>${esc(user.email || "-")}</span></div>
+        <div class="row"><span>Created: ${esc(created)}</span><span>Source: ${esc(source.utm_source || "direct")}</span><span>Email: <span class="status-email ${esc(emailStatus)}">${esc(emailStatus)}</span></span></div>
+        <div class="row"><span>${esc(item.estimateText || "-")}</span></div>
+        ${emailErrorMeta}
+        ${doneMeta}
+      </article>`;
+    }
+
+    function renderList(id, items, emptyText) {
+      const root = document.getElementById(id);
+      root.innerHTML = items.length ? items.map(requestCard).join("") : `<div class="empty">${esc(emptyText)}</div>`;
+    }
+
+    async function loadRequests() {
+      const res = await fetch("/api/admin/requests");
+      if (!res.ok) {
+        if (res.status === 401) { window.location.href = "/admin/login"; return; }
+        throw new Error("Unable to load requests");
+      }
+      data = await res.json();
+      renderList("pending-list", data.pending || [], "No pending requests.");
+      renderList("done-list", data.done || [], "No completed requests.");
+      bindApproveButtons();
+    }
+
+    function bindApproveButtons() {
+      [...document.querySelectorAll("[data-approve-id]")].forEach((button) => {
+        button.addEventListener("click", async () => {
+          const requestId = button.getAttribute("data-approve-id");
+          button.disabled = true;
+          button.textContent = "Approving...";
+          try {
+            const res = await fetch("/api/admin/approve", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ requestId }),
+            });
+            if (!res.ok) {
+              const body = await res.json().catch(() => ({}));
+              throw new Error(body.error || "Unable to approve request");
+            }
+            await loadRequests();
+          } catch (err) {
+            button.disabled = false;
+            button.textContent = "Approve";
+            alert(err.message || "Unable to approve request");
+          }
+        });
+      });
+    }
+
+    function bindTabs() {
+      const tabs = [...document.querySelectorAll(".tab")];
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          tabs.forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+          const isPending = tab.dataset.tab === "pending";
+          document.getElementById("pending-list").style.display = isPending ? "grid" : "none";
+          document.getElementById("done-list").style.display = isPending ? "none" : "grid";
+        });
+      });
+    }
+
+    async function logout() {
+      await fetch("/api/admin/logout", { method: "POST" });
+      window.location.href = "/admin/login";
+    }
+
+    async function init() {
+      bindTabs();
+      document.getElementById("logout-btn").addEventListener("click", logout);
+      const user = await requireSession();
+      if (!user) return;
+      await loadRequests();
+    }
+
+    init().catch(() => {
+      document.getElementById("pending-list").innerHTML = '<div class="empty">Error loading admin data. Refresh and try again.</div>';
+    });
+  </script>
+</body>
+</html>

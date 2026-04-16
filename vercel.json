@@ -1,0 +1,15 @@
+{
+  "version": 2,
+  "rewrites": [
+    { "source": "/api/admin/login", "destination": "/api/admin/login.js" },
+    { "source": "/api/admin/session", "destination": "/api/admin/session.js" },
+    { "source": "/api/admin/logout", "destination": "/api/admin/logout.js" },
+    { "source": "/api/admin/requests", "destination": "/api/admin/requests.js" },
+    { "source": "/api/admin/approve", "destination": "/api/admin/approve.js" },
+    { "source": "/admin/login", "destination": "/admin-login.html" },
+    { "source": "/admin/login/", "destination": "/admin-login.html" },
+    { "source": "/admin", "destination": "/admin.html" },
+    { "source": "/admin/", "destination": "/admin.html" },
+    { "source": "/", "destination": "/admin-login.html" }
+  ]
+}
