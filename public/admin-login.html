@@ -65,11 +65,22 @@
       height: 42px;
       border: 0;
       border-radius: 8px;
-      background: var(--dark);
+      background: #1a1a1a;
       color: #fff;
       font-size: 14px;
       font-weight: 600;
       cursor: pointer;
+    }
+    button:hover { opacity: 0.92; }
+    button:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
+    @media (prefers-color-scheme: dark) {
+      button {
+        background: #f3f4f6;
+        color: #12161b;
+      }
     }
     .error {
       margin-top: 12px;
