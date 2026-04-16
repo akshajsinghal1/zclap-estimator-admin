@@ -4,6 +4,9 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ZCLAP Admin Login</title>
+  <link rel="icon" type="image/png" href="/favicon.png?v=2" />
+  <link rel="shortcut icon" href="/favicon.png?v=2" />
+  <link rel="apple-touch-icon" href="/favicon.png?v=2" />
   <style>
     :root {
       --dark: #1a1a1a;
@@ -41,11 +44,15 @@
       padding: 28px;
     }
     .brand {
-      font-weight: 700;
-      margin-bottom: 8px;
-      font-size: 14px;
-      letter-spacing: 0.02em;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 10px;
+      text-decoration: none;
+      padding: 0;
     }
+    .brand img { display: block; height: 30px; width: auto; }
+    .brand-text { color: var(--dark); font-size: 12px; font-weight: 700; letter-spacing: 0.03em; }
     h1 { margin: 0 0 8px; font-size: 22px; }
     p { margin: 0 0 20px; color: var(--mid); font-size: 14px; }
     label { display: block; font-size: 13px; margin-bottom: 6px; color: var(--mid); }
@@ -92,7 +99,10 @@
 </head>
 <body>
   <div class="card">
-    <div class="brand">ZCLAP Admin</div>
+    <a class="brand" href="/" aria-label="ZCLAP Admin home">
+      <img src="/logo.png" alt="ZCLAP" />
+      <span class="brand-text">ADMIN</span>
+    </a>
     <h1>Internal Admin</h1>
     <p>Sign in to view pending requests and workflow status.</p>
 
