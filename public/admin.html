@@ -135,6 +135,8 @@
       const approvedAt = item.approvedAt ? new Date(item.approvedAt).toLocaleString() : "-";
       const source = item.source || {};
       const user = item.user || {};
+      const locationParts = [source.geo_city, source.geo_region, source.geo_country].filter(Boolean);
+      const locationText = locationParts.length ? locationParts.join(", ") : "Unknown";
       const approveBtn = item.status === "pending" ? `<button class="btn-approve" data-approve-id="${esc(item.id)}">Approve</button>` : "";
       const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
       const emailStatus = item.emailStatus || "queued";
@@ -148,6 +150,7 @@
         </div>
         <div class="row"><span><strong>${esc(user.firstName || "")} ${esc(user.lastName || "")}</strong></span><span>${esc(user.company || "-")}</span><span>${esc(user.email || "-")}</span></div>
         <div class="row"><span>Created: ${esc(created)}</span><span>Source: ${esc(source.utm_source || "direct")}</span><span>Email: <span class="status-email ${esc(emailStatus)}">${esc(emailStatus)}</span></span></div>
+        <div class="row"><span>Location: ${esc(locationText)}</span><span>Timezone: ${esc(source.geo_timezone || "-")}</span></div>
         <div class="row"><span>${esc(item.estimateText || "-")}</span></div>
         ${emailErrorMeta}
         ${doneMeta}
