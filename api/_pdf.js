@@ -217,8 +217,8 @@ function renderHtml(record) {
 // ---------------------------------------------------------------------------
 
 async function generateEstimatePDF(record) {
-  const chromium = require("@sparticuz/chromium");
-  const puppeteer = require("puppeteer-core");
+  const { default: chromium } = await import("@sparticuz/chromium");
+  const { default: puppeteer } = await import("puppeteer-core");
 
   const html = renderHtml(record);
 
