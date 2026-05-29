@@ -362,7 +362,7 @@
       const buildHrs = cdiHrs + circlebacks + daasHrs + profHrs + custBuild + matchHrs + layoutAndWorkflowHrs;
 
       const buildWks = Math.max(4, Math.ceil(buildHrs / 160));
-      const designAndReqWks = Math.max(2, Math.round((buildHrs * 0.30) / 120));
+      const designAndReqWks = Math.max(2, Math.round((buildHrs * (isModernization ? 0.30 : 0.35)) / 120));
       const testWks = Math.max(1, Math.round((buildHrs * (volScore < 2 ? 0.15 : 0.20)) / 160));
       const parallelWks = isModernization ? Math.max(2, Number(inp.parallelWeeks || 2)) : 0;
       const totalWks = designAndReqWks + buildWks + testWks + 1 + parallelWks;
