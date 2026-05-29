@@ -222,11 +222,19 @@ async function generateEstimatePDF(record) {
 
   const html = renderHtml(record);
 
+  const executablePath = await chromium.executablePath();
+
   const browser = await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+    args: [
+      ...chromium.args,
+      "--no-sandbox",
+      "--disable-setuid-sandbox",
+      "--disable-dev-shm-usage",
+      "--disable-gpu",
+    ],
+    defaultViewport: { width: 1280, height: 900 },
+    executablePath,
+    headless: true,
   });
 
   try {

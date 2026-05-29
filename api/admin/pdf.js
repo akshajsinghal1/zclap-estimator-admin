@@ -49,6 +49,6 @@ module.exports = async function handler(req, res) {
     res.status(200).end(pdfBuffer);
   } catch (err) {
     console.error("PDF download error:", err);
-    res.status(500).json({ error: "Failed to generate PDF" });
+    res.status(500).json({ error: "Failed to generate PDF", detail: String(err.message || err) });
   }
 };
