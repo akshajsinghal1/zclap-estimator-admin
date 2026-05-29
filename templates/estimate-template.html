@@ -845,10 +845,10 @@
 
         <table>
           <colgroup>
-            <col style="width:22%">
-            <col style="width:28%">
-            <col style="width:22%">
-            <col style="width:28%">
+            <col style="width:26%">
+            <col style="width:24%">
+            <col style="width:26%">
+            <col style="width:24%">
           </colgroup>
           <thead>
             <tr>
@@ -862,44 +862,48 @@
             <tr>
               <td class="input-cell">Estimator type</td>
               <td class="value-cell">{{ESTIMATOR_TYPE}}</td>
-              <td class="input-cell">OOTB entities</td>
-              <td class="value-cell"><div class="pill-list">{{OOTB_ENTITY_PILLS}}</div></td>
-            </tr>
-            <tr>
               <td class="input-cell">Custom entities</td>
               <td class="value-cell">{{CUSTOM_ENTITIES}}</td>
+            </tr>
+            <tr>
+              <td class="input-cell">OOTB entities</td>
+              <td class="value-cell" colspan="3"><div class="pill-list">{{OOTB_ENTITY_PILLS}}</div></td>
+            </tr>
+            <tr>
               <td class="input-cell">Relationships</td>
               <td class="value-cell">{{RELATIONSHIPS}}</td>
-            </tr>
-            <tr>
               <td class="input-cell">Hierarchies</td>
               <td class="value-cell">{{HIERARCHIES}}</td>
+            </tr>
+            <tr>
               <td class="input-cell">Batch source systems</td>
               <td class="value-cell">{{BATCH_SOURCE_SYSTEMS}}</td>
-            </tr>
-            <tr>
               <td class="input-cell">Real-time inbound</td>
               <td class="value-cell">{{REAL_TIME_INBOUND}}</td>
+            </tr>
+            <tr>
               <td class="input-cell">Batch consumers</td>
               <td class="value-cell">{{BATCH_CONSUMERS}}</td>
-            </tr>
-            <tr>
               <td class="input-cell">Real-time consumers</td>
               <td class="value-cell">{{REAL_TIME_CONSUMERS}}</td>
+            </tr>
+            <tr>
               <td class="input-cell">Create workflows</td>
               <td class="value-cell">{{CREATE_WORKFLOWS}}</td>
-            </tr>
-            <tr>
               <td class="input-cell">Record volume</td>
               <td class="value-cell">{{RECORD_VOLUME}}</td>
-              <td class="input-cell">DaaS / enrichment services</td>
-              <td class="value-cell">{{DAAS_SERVICES}}</td>
             </tr>
             <tr>
-              <td class="input-cell"><span class="only-modernization">Modernization only</span> — Parallel testing</td>
+              <td class="input-cell">DaaS / enrichment</td>
+              <td class="value-cell">{{DAAS_SERVICES}}</td>
+              <td class="input-cell"><span class="only-modernization">Mod. only</span> — Parallel testing</td>
               <td class="value-cell">{{PARALLEL_TESTING}}</td>
-              <td class="input-cell"><span class="only-modernization">Modernization only</span> — Legacy handling</td>
+            </tr>
+            <tr>
+              <td class="input-cell"><span class="only-modernization">Mod. only</span> — Legacy handling</td>
               <td class="value-cell">{{LEGACY_HANDLING}}</td>
+              <td class="input-cell"></td>
+              <td class="value-cell"></td>
             </tr>
           </tbody>
         </table>
