@@ -7,7 +7,7 @@
 
 const postmark = require("postmark");
 
-const FROM_ADDRESS = process.env.POSTMARK_FROM_ADDRESS || "hello@zclap.com";
+const FROM_ADDRESS = process.env.POSTMARK_FROM_ADDRESS || "info@zclap.com";
 const FROM_NAME = "ZCLAP";
 
 /**
@@ -66,7 +66,7 @@ async function sendEstimateEmail(record, pdfBuffer) {
   <p style="font-size:15px;line-height:1.6;color:#444;margin:0 0 16px;">
     This estimate is based on the scope you provided and has been reviewed by our team.
     If you have any questions or would like to discuss next steps, reply to this email or
-    reach us at <a href="mailto:hello@zclap.com">hello@zclap.com</a>.
+    reach us at <a href="mailto:info@zclap.com">info@zclap.com</a>.
   </p>
 
   <p style="font-size:15px;line-height:1.6;color:#444;margin:0 0 32px;">
@@ -79,7 +79,7 @@ async function sendEstimateEmail(record, pdfBuffer) {
 </body>
 </html>`;
 
-  const textBody = `Hi ${firstName},\n\nThank you for your interest in ZCLAP's MDM services. Please find your ${estimatorType} estimate attached.\n\n${costLine}\n\nIf you have any questions, reply to this email or reach us at hello@zclap.com.\n\nZCLAP · zclap.com`;
+  const textBody = `Hi ${firstName},\n\nThank you for your interest in ZCLAP's MDM services. Please find your ${estimatorType} estimate attached.\n\n${costLine}\n\nIf you have any questions, reply to this email or reach us at info@zclap.com.\n\nZCLAP · zclap.com`;
 
   try {
     const result = await client.sendEmail({

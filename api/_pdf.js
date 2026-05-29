@@ -148,7 +148,7 @@ function buildPdfData(record) {
     final_low: record.final_low ?? null,
     final_high: record.final_high ?? null,
 
-    contact_email: "hello@zclap.com",
+    contact_email: "info@zclap.com",
   };
 }
 
