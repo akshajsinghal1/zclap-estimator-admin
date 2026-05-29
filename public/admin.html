@@ -92,6 +92,83 @@
         color: #12161b;
       }
     }
+    /* ── Review Modal ─────────────────────────────────────────── */
+    .modal-overlay {
+      position: fixed; inset: 0;
+      background: rgba(0,0,0,0.55);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 200; padding: 16px;
+    }
+    .modal-overlay.hidden { display: none; }
+    .modal {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      width: 100%; max-width: 900px;
+      max-height: 92vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .modal-header {
+      padding: 16px 20px;
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+    }
+    .modal-header h2 { margin: 0; font-size: 16px; }
+    .modal-header .meta { font-size: 12px; color: var(--mid); margin-top: 3px; }
+    .modal-close { background: none; border: none; font-size: 20px; cursor: pointer; color: var(--mid); line-height: 1; padding: 0; }
+    .modal-body {
+      display: flex; flex: 1; overflow: hidden; min-height: 0;
+    }
+    .modal-inputs {
+      flex: 1; overflow-y: auto; padding: 20px 20px 20px 20px;
+      border-right: 1px solid var(--border);
+    }
+    .modal-result {
+      width: 230px; min-width: 230px; padding: 20px 16px;
+      background: var(--bg);
+      display: flex; flex-direction: column; gap: 0;
+      overflow-y: auto;
+    }
+    .modal-footer {
+      padding: 12px 20px;
+      border-top: 1px solid var(--border);
+      display: flex; justify-content: flex-end; gap: 10px; align-items: center;
+    }
+    .btn-cancel { background: none; border: 1px solid var(--border); color: var(--mid); height: 34px; padding: 0 14px; border-radius: 8px; cursor: pointer; font-size: 13px; }
+    .btn-cancel:hover { border-color: var(--mid); }
+    /* Input form */
+    .rv-section { margin-bottom: 18px; }
+    .rv-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mid); margin-bottom: 8px; }
+    .rv-checkboxes { display: flex; flex-wrap: wrap; gap: 6px; }
+    .rv-check { display: flex; align-items: center; gap: 5px; font-size: 13px; cursor: pointer; }
+    .rv-check input { cursor: pointer; }
+    .rv-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; gap: 10px; }
+    .rv-row label { font-size: 13px; color: var(--dark); flex: 1; }
+    .rv-row input[type=number], .rv-row select {
+      width: 100px; height: 32px; padding: 0 8px;
+      border: 1px solid var(--border); border-radius: 6px;
+      font-size: 13px; font-family: inherit; color: var(--dark); background: var(--card);
+    }
+    .rv-row select { width: 180px; }
+    /* Result panel */
+    .res-block { margin-bottom: 16px; }
+    .res-eyebrow { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--mid); margin-bottom: 4px; }
+    .res-value { font-size: 22px; font-weight: 700; color: var(--dark); line-height: 1.2; }
+    .res-sub { font-size: 12px; color: var(--mid); margin-top: 2px; }
+    .res-divider { border: none; border-top: 1px solid var(--border); margin: 12px 0; }
+    .res-final { background: var(--orange); border-radius: 8px; padding: 12px; margin-top: 4px; }
+    .res-final .res-eyebrow { color: rgba(255,255,255,0.8); }
+    .res-final .res-value { color: #fff; font-size: 20px; }
+    .res-final .res-sub { color: rgba(255,255,255,0.75); }
+    .contingency-input { display: flex; align-items: center; gap: 6px; }
+    .contingency-input input { width: 64px; height: 32px; padding: 0 8px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; font-weight: 600; font-family: inherit; color: var(--dark); background: var(--card); }
+    .contingency-input span { font-size: 14px; color: var(--mid); }
+    @media (max-width: 640px) {
+      .modal-body { flex-direction: column; }
+      .modal-result { width: 100%; border-right: none; border-top: 1px solid var(--border); }
+      .modal-inputs { border-right: none; }
+    }
   </style>
 </head>
 <body>
@@ -118,6 +195,27 @@
     <div id="done-list" class="list" style="display:none"></div>
   </main>
 
+  <!-- Review Modal -->
+  <div class="modal-overlay hidden" id="review-overlay" onclick="handleOverlayClick(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+      <div class="modal-header">
+        <div>
+          <h2 id="rv-title">Review Request</h2>
+          <div class="meta" id="rv-meta"></div>
+        </div>
+        <button class="modal-close" onclick="closeReview()" title="Close">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-inputs" id="rv-inputs"></div>
+        <div class="modal-result" id="rv-result"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn-cancel" onclick="closeReview()">Cancel</button>
+        <button class="btn-approve" id="rv-approve-btn" style="height:34px;padding:0 16px;font-size:13px;" onclick="submitReview()">Approve & Finalise →</button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let data = { pending: [], done: [] };
     const esc = (v) => String(v).replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
@@ -137,7 +235,9 @@
       const user = item.user || {};
       const locationParts = [source.geo_city, source.geo_region, source.geo_country].filter(Boolean);
       const locationText = locationParts.length ? locationParts.join(", ") : "Unknown";
-      const approveBtn = item.status === "pending" ? `<button class="btn-approve" data-approve-id="${esc(item.id)}">Approve</button>` : "";
+      const approveBtn = item.status === "pending"
+        ? `<button class="btn-approve" style="background:var(--bg);color:var(--dark);border:1px solid var(--border);margin-right:6px" data-review-id="${esc(item.id)}">Review</button>`
+        : "";
       const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
       const emailStatus = item.emailStatus || "queued";
       const emailErrorMeta = emailStatus === "undelivered" && item.emailError
@@ -172,32 +272,271 @@
       renderList("pending-list", data.pending || [], "No pending requests.");
       renderList("done-list", data.done || [], "No completed requests.");
       bindApproveButtons();
+      bindReviewButtons();
     }
 
     function bindApproveButtons() {
-      [...document.querySelectorAll("[data-approve-id]")].forEach((button) => {
-        button.addEventListener("click", async () => {
-          const requestId = button.getAttribute("data-approve-id");
-          button.disabled = true;
-          button.textContent = "Approving...";
-          try {
-            const res = await fetch("/api/admin/approve", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ requestId }),
-            });
-            if (!res.ok) {
-              const body = await res.json().catch(() => ({}));
-              throw new Error(body.error || "Unable to approve request");
-            }
-            await loadRequests();
-          } catch (err) {
-            button.disabled = false;
-            button.textContent = "Approve";
-            alert(err.message || "Unable to approve request");
-          }
+      // kept for direct approve if ever needed
+    }
+
+    function bindReviewButtons() {
+      [...document.querySelectorAll("[data-review-id]")].forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const id = btn.getAttribute("data-review-id");
+          const item = (data.pending || []).find(r => r.id === id);
+          if (item) openReview(item);
         });
       });
+    }
+
+    // ── Calc (mirrors estimator calc() exactly) ──────────────────
+    function roundToStep(n, step) { return Math.round(Number(n || 0) / step) * step; }
+
+    function calcFromInputs(inp, estimatorType) {
+      const ootbN = (inp.ootb || []).length;
+      const custN = Number(inp.customEnt || 0);
+      const totalEnt = ootbN + custN;
+      const relN = Number(inp.rels || 0);
+      const hierN = Number(inp.hierarchies || 0);
+      const bOut = Number(inp.consumers || 0);
+      const rtIn = Number(inp.rtSources || 0);
+      const rtOut = Number(inp.rtConsumers || 0);
+      const daas = Number(inp.daas || 0);
+      const createWkfl = Number(inp.createWkfl || 0);
+      const isModernization = estimatorType === 'modernization';
+
+      const migMap = { 'Load by business ID': 1, 'Merge by old ID': 2, 'New match/merge': 3 };
+      const migrationOption = migMap[inp.legacyHandling] || 3;
+
+      const baseBatchIn = Number(inp.sources || 0);
+      const bIn = isModernization && migrationOption === 1 ? baseBatchIn + 1 : baseBatchIn;
+      const matchFactor = isModernization ? (migrationOption === 3 ? 1 : 2) : 1;
+
+      const volMap = { 'Less than 1 million': 0, '1 million to 10 million': 1, '10 million to 80 million': 2, 'Over 80 million': 3 };
+      const volScore = volMap[inp.volume] || 0;
+
+      const entInHrs = totalEnt * bIn * 32;
+      const relInHrs = relN * bIn * 6;
+      const hierInHrs = hierN * bIn * 12;
+      const entOutHrs = totalEnt * bOut * 24;
+      const relOutHrs = relN * bOut * 4;
+      const hierOutHrs = hierN * bOut * 12;
+      const rtInHrs = rtIn * totalEnt * 24;
+      const rtOutHrs = rtOut * totalEnt * 32;
+      const circlebacks = (createWkfl > 0 ? 1 : 0) * totalEnt * 40;
+      const daasHrs = daas * 40;
+      const profHrs = totalEnt * (bIn + rtIn) * 8;
+      const custBuild = custN * 8;
+      const matchHrs = totalEnt * matchFactor * 32;
+      const layoutAndWorkflowHrs = (totalEnt * 1 * 6) + (totalEnt * 2 * 6) + (createWkfl * 10);
+      const cdiHrs = entInHrs + relInHrs + hierInHrs + entOutHrs + relOutHrs + hierOutHrs + rtInHrs + rtOutHrs;
+      const buildHrs = cdiHrs + circlebacks + daasHrs + profHrs + custBuild + matchHrs + layoutAndWorkflowHrs;
+
+      const buildWks = Math.max(4, Math.ceil(buildHrs / 160));
+      const designAndReqWks = Math.max(2, Math.round((buildHrs * 0.30) / 120));
+      const testWks = Math.max(1, Math.round((buildHrs * (volScore < 2 ? 0.15 : 0.20)) / 160));
+      const parallelWks = isModernization ? Math.max(2, Number(inp.parallelWeeks || 2)) : 0;
+      const totalWks = designAndReqWks + buildWks + testWks + 1 + parallelWks;
+
+      const rawSheetValue = (totalWks * 15 * 180) + (totalWks * 20 * 195) + (totalWks * 25 * 120)
+        + (profHrs * 60) + (buildHrs * 0.28 * 60)
+        + ((rtIn > 0 || rtOut > 0 ? totalWks * 10 : 0) * 120)
+        + (cdiHrs * 60);
+      const calibrationFactor = isModernization ? 1.2373 : 1.1993;
+      const sheetValue = rawSheetValue * calibrationFactor;
+      const low = roundToStep(sheetValue * 1.20, 5000);
+      const high = roundToStep(sheetValue * 1.30, 5000);
+
+      let rs = 0;
+      if (volScore >= 2) rs += 2; else if (volScore === 1) rs += 1;
+      if (rtIn > 2 || rtOut > 2) rs += 2; else if (rtIn > 0 || rtOut > 0) rs += 1;
+      if (totalEnt > 6) rs += 2; else if (totalEnt > 3) rs += 1;
+      if (relN > 6) rs += 1;
+      if (bIn + bOut > 8) rs += 1;
+      if (isModernization) rs += 1;
+      if (isModernization && migrationOption !== 3) rs += 1;
+      const risk = rs <= 2 ? 'Low' : rs <= 5 ? 'Medium' : 'High';
+
+      return { low, high, totalWks, risk,
+        lowFmt: '$' + low.toLocaleString(), highFmt: '$' + high.toLocaleString() };
+    }
+
+    // ── Review state ──────────────────────────────────────────────
+    let rv = { item: null, inp: {}, type: '', contingency: 20 };
+
+    function openReview(item) {
+      rv.item = item;
+      rv.type = item.estimatorType || item.estimator_type || 'implementation';
+      rv.inp = JSON.parse(JSON.stringify(item.inputs || {}));
+      rv.contingency = 20;
+
+      const user = item.user || {};
+      const fn = item.firstName || item.first_name || user.firstName || '';
+      const ln = item.lastName  || item.last_name  || user.lastName  || '';
+      const co = item.company   || user.company   || '';
+      document.getElementById('rv-title').textContent = `Review: ${fn} ${ln}`.trim() || 'Review Request';
+      document.getElementById('rv-meta').textContent  = [co, item.id].filter(Boolean).join(' · ');
+
+      renderReviewInputs();
+      updateReviewResult();
+      document.getElementById('review-overlay').classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+
+    function closeReview() {
+      document.getElementById('review-overlay').classList.add('hidden');
+      document.body.style.overflow = '';
+      rv = { item: null, inp: {}, type: '', contingency: 20 };
+    }
+
+    function handleOverlayClick(e) {
+      if (e.target === document.getElementById('review-overlay')) closeReview();
+    }
+
+    const OOTB_OPTIONS = ['Organization','Person','Supplier','Contact','Item','Category'];
+
+    function renderReviewInputs() {
+      const isMod = rv.type === 'modernization';
+      const inp = rv.inp;
+
+      let h = '';
+
+      if (isMod) {
+        h += `<div class="rv-section">
+          <div class="rv-label">Modernization</div>
+          <div class="rv-row"><label>Parallel testing weeks</label><input type="number" id="rv-parallelWeeks" min="2" max="16" value="${inp.parallelWeeks||2}" oninput="rvSet('parallelWeeks',+this.value)"></div>
+          <div class="rv-row"><label>Legacy record handling</label>
+            <select id="rv-legacyHandling" onchange="rvSet('legacyHandling',this.value)">
+              <option ${inp.legacyHandling==='Load by business ID'?'selected':''}>Load by business ID</option>
+              <option ${inp.legacyHandling==='Merge by old ID'?'selected':''}>Merge by old ID</option>
+              <option ${(!inp.legacyHandling||inp.legacyHandling==='New match/merge')?'selected':''}>New match/merge</option>
+            </select>
+          </div>
+        </div>`;
+      }
+
+      h += `<div class="rv-section">
+        <div class="rv-label">OOTB Entities</div>
+        <div class="rv-checkboxes">
+          ${OOTB_OPTIONS.map(o => `<label class="rv-check"><input type="checkbox" value="${o}" ${(inp.ootb||[]).includes(o)?'checked':''} onchange="rvToggleOotb('${o}',this.checked)"> ${o}</label>`).join('')}
+        </div>
+      </div>`;
+
+      const numRow = (id, label, min, max, val) =>
+        `<div class="rv-row"><label>${label}</label><input type="number" id="rv-${id}" min="${min}" max="${max}" value="${val??0}" oninput="rvSet('${id}',+this.value)"></div>`;
+
+      h += `<div class="rv-section">
+        <div class="rv-label">Entities</div>
+        ${numRow('customEnt','Custom entities',0,20,inp.customEnt)}
+      </div>`;
+
+      h += `<div class="rv-section">
+        <div class="rv-label">Relationships &amp; Hierarchies</div>
+        ${numRow('rels','Relationships',0,30,inp.rels)}
+        ${numRow('hierarchies','Hierarchies',0,20,inp.hierarchies)}
+      </div>`;
+
+      h += `<div class="rv-section">
+        <div class="rv-label">Source &amp; Consuming Systems</div>
+        ${numRow('sources','Batch source systems',0,30,inp.sources)}
+        ${numRow('rtSources','Real-time inbound sources',0,20,inp.rtSources)}
+        ${numRow('consumers','Batch consumers',0,30,inp.consumers)}
+        ${numRow('rtConsumers','Real-time consumers',0,20,inp.rtConsumers)}
+      </div>`;
+
+      h += `<div class="rv-section">
+        <div class="rv-label">Workflows &amp; Volume</div>
+        ${numRow('createWkfl','Entities with create workflows',0,20,inp.createWkfl)}
+        <div class="rv-row"><label>Source record volume</label>
+          <select onchange="rvSet('volume',this.value)">
+            ${['Less than 1 million','1 million to 10 million','10 million to 80 million','Over 80 million'].map(v=>`<option ${inp.volume===v?'selected':''}>${v}</option>`).join('')}
+          </select>
+        </div>
+      </div>`;
+
+      h += `<div class="rv-section">
+        <div class="rv-label">Data Cleansing / Enrichment</div>
+        ${numRow('daas','DaaS / enrichment services',0,10,inp.daas)}
+      </div>`;
+
+      document.getElementById('rv-inputs').innerHTML = h;
+    }
+
+    function rvSet(key, val) {
+      rv.inp[key] = val;
+      updateReviewResult();
+    }
+
+    function rvToggleOotb(name, checked) {
+      rv.inp.ootb = rv.inp.ootb || [];
+      if (checked) { if (!rv.inp.ootb.includes(name)) rv.inp.ootb.push(name); }
+      else { rv.inp.ootb = rv.inp.ootb.filter(o => o !== name); }
+      updateReviewResult();
+    }
+
+    function updateReviewResult() {
+      const r = calcFromInputs(rv.inp, rv.type);
+      const pct = Number(document.getElementById('rv-contingency')?.value ?? rv.contingency) || 0;
+      rv.contingency = pct;
+      const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
+      const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
+      const fmtK = n => '$' + n.toLocaleString();
+
+      document.getElementById('rv-result').innerHTML = `
+        <div class="res-block">
+          <div class="res-eyebrow">T&amp;M Base</div>
+          <div class="res-value">${r.lowFmt} – ${r.highFmt}</div>
+          <div class="res-sub">${r.totalWks} wks · ${r.risk} complexity</div>
+        </div>
+        <hr class="res-divider">
+        <div class="res-block">
+          <div class="res-eyebrow">Fixed Price Contingency</div>
+          <div class="contingency-input">
+            <input type="number" id="rv-contingency" min="0" max="100" value="${pct}" oninput="updateReviewResult()">
+            <span>%</span>
+          </div>
+        </div>
+        <hr class="res-divider">
+        <div class="res-final">
+          <div class="res-eyebrow">Final Quoted Price</div>
+          <div class="res-value">${fmtK(finalLow)} – ${fmtK(finalHigh)}</div>
+          <div class="res-sub">${r.totalWks} wks estimated</div>
+        </div>`;
+    }
+
+    async function submitReview() {
+      if (!rv.item) return;
+      const btn = document.getElementById('rv-approve-btn');
+      btn.disabled = true; btn.textContent = 'Approving...';
+
+      const r = calcFromInputs(rv.inp, rv.type);
+      const pct = rv.contingency || 0;
+      const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
+      const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
+
+      try {
+        const res = await fetch('/api/admin/approve', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            requestId:       rv.item.id,
+            reviewedInputs:  rv.inp,
+            reviewedOutputs: { ...r },
+            contingencyPct:  pct,
+            finalLow,
+            finalHigh,
+          }),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => ({}));
+          throw new Error(body.error || 'Unable to approve');
+        }
+        closeReview();
+        await loadRequests();
+      } catch (err) {
+        btn.disabled = false; btn.textContent = 'Approve & Finalise →';
+        alert(err.message || 'Unable to approve request');
+      }
     }
 
     function bindTabs() {

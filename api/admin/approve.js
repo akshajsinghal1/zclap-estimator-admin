@@ -13,22 +13,38 @@ module.exports = async function handler(req, res) {
     return;
   }
 
-  const requestId = String((req.body && req.body.requestId) || "").trim();
+  const body = req.body || {};
+  const requestId = String(body.requestId || "").trim();
   if (!requestId) {
     res.status(400).json({ error: "Missing requestId" });
     return;
   }
 
+  // Optional reviewed fields from admin panel
+  const reviewedInputs  = body.reviewedInputs  || null;
+  const reviewedOutputs = body.reviewedOutputs || null;
+  const contingencyPct  = body.contingencyPct  != null ? Number(body.contingencyPct)  : null;
+  const finalLow        = body.finalLow        != null ? Number(body.finalLow)        : null;
+  const finalHigh       = body.finalHigh       != null ? Number(body.finalHigh)       : null;
+
   try {
     const supabase = getSupabaseAdminClient();
     const approvedAt = new Date().toISOString();
+
+    const updatePayload = {
+      status:      "done",
+      approved_by: approverEmail,
+      approved_at: approvedAt,
+    };
+    if (reviewedInputs  !== null) updatePayload.reviewed_inputs  = reviewedInputs;
+    if (reviewedOutputs !== null) updatePayload.reviewed_outputs = reviewedOutputs;
+    if (contingencyPct  !== null) updatePayload.contingency_pct  = contingencyPct;
+    if (finalLow        !== null) updatePayload.final_low        = finalLow;
+    if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
+
     const { data, error } = await supabase
       .from("estimator_requests")
-      .update({
-        status: "done",
-        approved_by: approverEmail,
-        approved_at: approvedAt,
-      })
+      .update(updatePayload)
       .eq("id", requestId)
       .eq("status", "pending")
       .select("id,status,approved_by,approved_at")
@@ -47,10 +63,7 @@ module.exports = async function handler(req, res) {
 
     res.status(200).json({
       ok: true,
-      request: {
-        ...data,
-        email_status: "not_sent",
-      },
+      request: { ...data, email_status: "not_sent" },
     });
   } catch (err) {
     console.error("Approve API error:", err);
