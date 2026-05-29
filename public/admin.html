@@ -238,6 +238,7 @@
       const approveBtn = item.status === "pending"
         ? `<button class="btn-approve" style="background:var(--bg);color:var(--dark);border:1px solid var(--border);margin-right:6px" data-review-id="${esc(item.id)}">Review</button>`
         : "";
+      const pdfBtn = `<button class="btn-approve" style="background:none;color:var(--mid);border:1px solid var(--border);margin-right:6px" data-pdf-id="${esc(item.id)}" title="Download PDF">⬇ PDF</button>`;
       const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
       const emailStatus = item.emailStatus || "queued";
       const emailErrorMeta = emailStatus === "undelivered" && item.emailError
@@ -246,7 +247,7 @@
       return `<article class="card">
         <div class="top-row">
           <div><span class="status ${esc(item.status)}">${esc(item.status)}</span><strong style="margin-left:8px">${esc(item.id)}</strong></div>
-          ${approveBtn}
+          <div style="display:flex;align-items:center;">${approveBtn}${pdfBtn}</div>
         </div>
         <div class="row"><span><strong>${esc(user.firstName || "")} ${esc(user.lastName || "")}</strong></span><span>${esc(user.company || "-")}</span><span>${esc(user.email || "-")}</span></div>
         <div class="row"><span>Created: ${esc(created)}</span><span>Source: ${esc(source.utm_source || "direct")}</span><span>Email: <span class="status-email ${esc(emailStatus)}">${esc(emailStatus)}</span></span></div>
@@ -273,6 +274,7 @@
       renderList("done-list", data.done || [], "No completed requests.");
       bindApproveButtons();
       bindReviewButtons();
+      bindPdfButtons();
     }
 
     function bindApproveButtons() {
@@ -285,6 +287,33 @@
           const id = btn.getAttribute("data-review-id");
           const item = (data.pending || []).find(r => r.id === id);
           if (item) openReview(item);
+        });
+      });
+    }
+
+    function bindPdfButtons() {
+      [...document.querySelectorAll("[data-pdf-id]")].forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const id = btn.getAttribute("data-pdf-id");
+          const original = btn.textContent;
+          btn.textContent = "Generating…";
+          btn.disabled = true;
+          try {
+            const res = await fetch(`/api/admin/pdf?id=${encodeURIComponent(id)}`);
+            if (!res.ok) throw new Error(await res.text());
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `ZCLAP-MDM-Estimate-${id}.pdf`;
+            a.click();
+            URL.revokeObjectURL(url);
+          } catch (err) {
+            alert("PDF generation failed: " + err.message);
+          } finally {
+            btn.textContent = original;
+            btn.disabled = false;
+          }
         });
       });
     }

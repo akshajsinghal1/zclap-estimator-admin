@@ -4,6 +4,10 @@
     "api/admin/approve.js": {
       "includeFiles": "templates/**,logo/**",
       "maxDuration": 30
+    },
+    "api/admin/pdf.js": {
+      "includeFiles": "templates/**,logo/**",
+      "maxDuration": 30
     }
   },
   "rewrites": [
@@ -12,6 +16,7 @@
     { "source": "/api/admin/logout", "destination": "/api/admin/logout.js" },
     { "source": "/api/admin/requests", "destination": "/api/admin/requests.js" },
     { "source": "/api/admin/approve", "destination": "/api/admin/approve.js" },
+    { "source": "/api/admin/pdf",     "destination": "/api/admin/pdf.js" },
     { "source": "/admin/login", "destination": "/admin-login.html" },
     { "source": "/admin/login/", "destination": "/admin-login.html" },
     { "source": "/admin", "destination": "/admin.html" },
