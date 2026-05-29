@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "dependencies": {
-    "@supabase/supabase-js": "^2.103.1"
+    "@sparticuz/chromium": "^149.0.0",
+    "@supabase/supabase-js": "^2.103.1",
+    "postmark": "^4.0.7",
+    "puppeteer-core": "^25.1.0"
   }
 }

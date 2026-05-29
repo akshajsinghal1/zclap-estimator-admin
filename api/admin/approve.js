@@ -1,5 +1,7 @@
 const { getAuthenticatedUser } = require("./_auth");
 const { getSupabaseAdminClient } = require("../_supabase");
+const { generateEstimatePDF } = require("../_pdf");
+const { sendEstimateEmail } = require("../_email");
 
 module.exports = async function handler(req, res) {
   if (req.method !== "POST") {
@@ -42,28 +44,67 @@ module.exports = async function handler(req, res) {
     if (finalLow        !== null) updatePayload.final_low        = finalLow;
     if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
 
-    const { data, error } = await supabase
+    // Update the record and fetch it back with all fields needed for the PDF
+    const { data: approved, error: updateError } = await supabase
       .from("estimator_requests")
       .update(updatePayload)
       .eq("id", requestId)
       .eq("status", "pending")
-      .select("id,status,approved_by,approved_at")
+      .select("id,status,approved_by,approved_at,estimator_type,first_name,last_name,email,company,role,inputs,outputs,reviewed_inputs,reviewed_outputs,contingency_pct,final_low,final_high")
       .maybeSingle();
 
-    if (error) {
-      console.error("Approve request error:", error);
+    if (updateError) {
+      console.error("Approve request error:", updateError);
       res.status(500).json({ error: "Failed to approve request" });
       return;
     }
 
-    if (!data) {
+    if (!approved) {
       res.status(404).json({ error: "Pending request not found" });
       return;
     }
 
+    // --- Generate PDF + send email (non-blocking — don't fail the approval if this errors) ---
+    let emailStatus = "not_sent";
+    let emailError = null;
+
+    try {
+      const pdfBuffer = await generateEstimatePDF(approved);
+
+      const emailResult = await sendEstimateEmail(approved, pdfBuffer);
+      emailStatus = emailResult.sent ? "sent" : "not_sent";
+      emailError = emailResult.error || null;
+
+      // Update email status in DB
+      await supabase
+        .from("estimator_requests")
+        .update({
+          email_status: emailStatus,
+          email_error: emailError,
+          sent_at: emailResult.sent ? new Date().toISOString() : null,
+        })
+        .eq("id", requestId);
+
+    } catch (pdfErr) {
+      console.error("PDF/email error (non-fatal):", pdfErr);
+      emailStatus = "not_sent";
+      emailError = String(pdfErr.message || pdfErr);
+
+      await supabase
+        .from("estimator_requests")
+        .update({ email_status: "not_sent", email_error: emailError })
+        .eq("id", requestId);
+    }
+
     res.status(200).json({
       ok: true,
-      request: { ...data, email_status: "not_sent" },
+      request: {
+        id: approved.id,
+        status: approved.status,
+        approved_by: approved.approved_by,
+        approved_at: approved.approved_at,
+        email_status: emailStatus,
+      },
     });
   } catch (err) {
     console.error("Approve API error:", err);

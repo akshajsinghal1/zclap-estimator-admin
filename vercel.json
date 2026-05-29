@@ -1,5 +1,11 @@
 {
   "version": 2,
+  "functions": {
+    "api/admin/approve.js": {
+      "includeFiles": "templates/**,logo/**",
+      "maxDuration": 30
+    }
+  },
   "rewrites": [
     { "source": "/api/admin/login", "destination": "/api/admin/login.js" },
     { "source": "/api/admin/session", "destination": "/api/admin/session.js" },
