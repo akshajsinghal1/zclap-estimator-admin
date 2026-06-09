@@ -375,7 +375,8 @@
       const buildCDI   = cdiBaseHrs + circlebacks + searchBeforeCreate + (isModernization ? 0 : daasHrs);
       const buildMDM   = custBuild + ootbAdjust + matchHrs + layoutAndWorkflowHrs;
       const buildDQ    = profHrs + dqFuncHrs;
-      const buildHrs   = buildCDI + buildMDM + buildDQ + (isModernization ? daasHrs : 0);
+      // SaaS: daasHrs already inside buildCDI. Migration: DaaS excluded from buildHrs entirely (Excel model).
+      const buildHrs   = buildCDI + buildMDM + buildDQ;
 
       // Developer counts — Excel's stepped IF formulas
       const cdiWks  = buildCDI / 40;
