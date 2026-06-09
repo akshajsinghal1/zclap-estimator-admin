@@ -353,17 +353,20 @@
       const rtInHrs = rtIn * totalEnt * 24;
       const rtOutHrs = rtOut * totalEnt * 32;
       const circlebacks = (createWkfl > 0 ? 1 : 0) * totalEnt * 40;
-      const daasHrs = daas * 40;
+      const searchBeforeCreate = createWkfl > 0 ? 40 : 0;
+      const daasHrs = daas * 60;
       const profHrs = totalEnt * (bIn + rtIn) * 8;
-      const custBuild = custN * 8;
+      const custBuild = custN * 12;
+      const ootbAdjust = ootbN * 8;
+      const dqFuncHrs = totalEnt * 10 * 2;
       const matchHrs = totalEnt * matchFactor * 32;
       const layoutAndWorkflowHrs = (totalEnt * 1 * 6) + (totalEnt * 2 * 6) + (createWkfl * 10);
       const cdiHrs = entInHrs + relInHrs + hierInHrs + entOutHrs + relOutHrs + hierOutHrs + rtInHrs + rtOutHrs;
-      const buildHrs = cdiHrs + circlebacks + daasHrs + profHrs + custBuild + matchHrs + layoutAndWorkflowHrs;
+      const buildHrs = cdiHrs + circlebacks + searchBeforeCreate + daasHrs + profHrs + custBuild + ootbAdjust + dqFuncHrs + matchHrs + layoutAndWorkflowHrs;
 
       const buildWks = Math.max(4, Math.ceil(buildHrs / 160));
-      const designAndReqWks = Math.max(2, Math.round((buildHrs * (isModernization ? 0.30 : 0.35)) / 120));
-      const testWks = Math.max(1, Math.round((buildHrs * (volScore < 2 ? 0.15 : 0.20)) / 160));
+      const designAndReqWks = Math.max(2, Math.round((buildHrs * 0.30) / 120));
+      const testWks = Math.max(isModernization ? 3 : 2, Math.round((buildHrs * (volScore < 2 ? 0.10 : 0.15)) / 160));
       const parallelWks = isModernization ? Math.max(2, Number(inp.parallelWeeks || 2)) : 0;
       const totalWks = designAndReqWks + buildWks + testWks + 1 + parallelWks;
 
