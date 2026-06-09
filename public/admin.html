@@ -368,23 +368,53 @@
       const dqFuncHrs = totalEnt * 10 * 2;
       const matchHrs = totalEnt * matchFactor * 32;
       const layoutAndWorkflowHrs = (totalEnt * 1 * 6) + (totalEnt * 2 * 6) + (createWkfl * 10);
-      const cdiHrs = entInHrs + relInHrs + hierInHrs + entOutHrs + relOutHrs + hierOutHrs + rtInHrs + rtOutHrs;
-      const buildHrs = cdiHrs + circlebacks + searchBeforeCreate + daasHrs + profHrs + custBuild + ootbAdjust + dqFuncHrs + matchHrs + layoutAndWorkflowHrs;
 
-      const buildWks = Math.max(4, Math.ceil(buildHrs / 160));
-      const designAndReqWks = Math.max(2, Math.round((buildHrs * 0.30) / 120));
-      const testWks = Math.max(isModernization ? 3 : 2, Math.round((buildHrs * (volScore < 2 ? 0.10 : 0.15)) / 160));
+      // Excel Hour Totals sub-totals (mirrors spreadsheet structure)
+      // SaaS: DaaS included in CDI sub-total; Migration: DaaS excluded from CDI dev-count sub-total
+      const cdiBaseHrs = entInHrs + relInHrs + hierInHrs + entOutHrs + relOutHrs + hierOutHrs + rtInHrs + rtOutHrs;
+      const buildCDI   = cdiBaseHrs + circlebacks + searchBeforeCreate + (isModernization ? 0 : daasHrs);
+      const buildMDM   = custBuild + ootbAdjust + matchHrs + layoutAndWorkflowHrs;
+      const buildDQ    = profHrs + dqFuncHrs;
+      const buildHrs   = buildCDI + buildMDM + buildDQ + (isModernization ? daasHrs : 0);
+
+      // Developer counts — Excel's stepped IF formulas
+      const cdiWks  = buildCDI / 40;
+      const cdiDevs = cdiWks > 80 ? 8 : cdiWks > 60 ? 7 : cdiWks > 40 ? 5 : cdiWks > 15 ? 4 : cdiWks > 9 ? 3 : cdiWks > 2 ? 2 : 1;
+      const mdmDevs = totalEnt > 4 ? 3 : totalEnt > 2 ? 2 : 1;
+
+      // Build duration = max of CDI and MDM parallel tracks (Excel E54: CEILING(MAX(E50,H50),1))
+      const buildWks = Math.ceil(Math.max(cdiWks / cdiDevs, (buildMDM / 40) / mdmDevs));
+
+      // Phase durations — exact Excel formulas
+      const reqWks    = Math.max(1, Math.min(5, Math.round(buildHrs * 0.15 / 120)));
+      const designWks = Math.max(1, Math.min(5, Math.round(buildHrs * 0.15 / 120)));
+      const integWks  = Math.max(isModernization ? 3 : 2, Math.round(0.35 * designWks));
+      const uatWks    = Math.max(2, Math.min(isModernization ? 6 : 5, Math.round(buildHrs * 0.05 / 40)));
       const parallelWks = isModernization ? Math.max(2, Number(inp.parallelWeeks || 2)) : 0;
-      const totalWks = designAndReqWks + buildWks + testWks + 1 + parallelWks;
 
-      const rawSheetValue = (totalWks * 15 * 180) + (totalWks * 20 * 195) + (totalWks * 25 * 120)
-        + (profHrs * 60) + (buildHrs * 0.28 * 60)
-        + ((rtIn > 0 || rtOut > 0 ? totalWks * 10 : 0) * 120)
-        + (cdiHrs * 60);
-      const calibrationFactor = isModernization ? 1.2373 : 1.1993;
-      const sheetValue = rawSheetValue * calibrationFactor;
-      const low = roundToStep(sheetValue * 1.20, 5000);
-      const high = roundToStep(sheetValue * 1.30, 5000);
+      // Schedule overlaps (Excel Schedule sheet IF formulas)
+      const buildDesignOverlap = (buildWks > 4 && designWks > 2) ? 1 : 0;
+      const integBuildOverlap  = integWks > 3 ? (buildWks > 6 ? 2 : buildWks > 4 ? 1 : 0) : 0;
+
+      // Total weeks — training (2wk) and cutover (1wk) net to zero via their own overlaps
+      const totalWks = 1 + reqWks + designWks + buildWks + integWks + uatWks + parallelWks
+                       - buildDesignOverlap - integBuildOverlap;
+
+      // Per-role cost — exact Excel Schedule sheet formula (T&M, before uplift)
+      const intgArchHrsPW = bIn > 4 ? 15 : bIn > 2 ? 10 : 0;
+      const rawCost = totalWks * (
+          15 * 180              // Project Manager: 15 hrs/wk × $180
+        + 20 * 195              // MDM Advisor: 20 hrs/wk × $195
+        + 25 * 120              // Solution Architect: 25 hrs/wk × $120
+        + 10 * 60               // CDQ: 10 hrs/wk × $60
+        + 20 * mdmDevs * 60     // MDM developers: 20 hrs/wk × count × $60
+        + intgArchHrsPW * 120   // Integration Architect (conditional on batch sources) × $120
+        + cdiDevs * 28 * 60     // CDI/CAI developers: 28 hrs/wk × count × $60
+      );
+
+      // Fixed-price uplift ×1.2 (Excel x_Fixed_Fee_Uplift = 1.2); low = fixed price, high = +8.3% buffer
+      const low  = roundToStep(rawCost * 1.20, 5000);
+      const high = roundToStep(rawCost * 1.30, 5000);
 
       let rs = 0;
       if (volScore >= 2) rs += 2; else if (volScore === 1) rs += 1;
