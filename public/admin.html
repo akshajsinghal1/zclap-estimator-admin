@@ -322,11 +322,11 @@
     function roundToStep(n, step) { return Math.round(Number(n || 0) / step) * step; }
 
     // ── Calculator version ──────────────────────────────────────────────────
-    // v1.0 — synced with Lynn's May 2026 spreadsheets (2026-06-09)
+    // v1.1 — synced with Lynn's May 2026 spreadsheets (2026-06-09)
     //   Fixed Bid MDM SaaS Estimator_MASTER_May2026.xlsx
     //   Fixed Bid MDM MIGRATION_Estimator_May26.xlsx
     // ───────────────────────────────────────────────────────────────────────
-    const CALCULATOR_VERSION = "v1.0";
+    const CALCULATOR_VERSION = "v1.1";
 
     function calcFromInputs(inp, estimatorType) {
       const ootbN = (inp.ootb || []).length;
