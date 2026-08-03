@@ -241,8 +241,8 @@
       const pdfBtn = `<button class="btn-approve" style="background:none;color:var(--mid);border:1px solid var(--border);margin-right:6px" data-pdf-id="${esc(item.id)}" title="Download PDF">⬇ PDF</button>`;
       const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
       const emailStatus = item.emailStatus || "queued";
-      const emailErrorMeta = emailStatus === "undelivered" && item.emailError
-        ? `<div class="row"><span class="email-error">Delivery error: ${esc(item.emailError)}</span></div>`
+      const emailErrorMeta = (emailStatus === "undelivered" || emailStatus === "not_sent") && item.emailError
+        ? `<div class="row"><span class="email-error">Email error: ${esc(item.emailError)}</span></div>`
         : "";
       return `<article class="card">
         <div class="top-row">

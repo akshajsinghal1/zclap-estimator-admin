@@ -72,7 +72,13 @@ module.exports = async function handler(req, res) {
       const pdfBuffer = await generateEstimatePDF(approved);
 
       const emailResult = await sendEstimateEmail(approved, pdfBuffer);
-      emailStatus = emailResult.sent ? "sent" : "not_sent";
+      if (emailResult.sent) {
+        emailStatus = "sent";
+      } else if (emailResult.error === "SMTP not configured") {
+        emailStatus = "not_sent";
+      } else {
+        emailStatus = "undelivered";
+      }
       emailError = emailResult.error || null;
 
       // Update email status in DB
