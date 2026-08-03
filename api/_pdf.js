@@ -162,11 +162,6 @@ function renderHtml(record) {
   data.timeline_weeks = formatTimeline(data.timeline_weeks);
   data.estimate_title = `MDM ${data.estimator_type} Estimate`;
 
-  // If a fixed price was approved, use it as the displayed cost range
-  if (data.final_low != null && data.final_high != null) {
-    data.cost_range = `${formatCurrency(data.final_low)} – ${formatCurrency(data.final_high)}`;
-  }
-
   let html = fs.readFileSync(TEMPLATE_PATH, "utf8");
 
   // Inline logo as base64 data URL so there are no external file dependencies
@@ -212,8 +207,7 @@ function renderHtml(record) {
 
   // HTML-content substitutions (not escaped)
   html = html.replaceAll("{{OOTB_ENTITY_PILLS}}", renderPills(data.ootb_entities));
-  // Fixed-price section is suppressed — cost_range already shows the final price when approved
-  html = html.replaceAll("{{FIXED_PRICE_SECTION}}", "");
+  html = html.replaceAll("{{FIXED_PRICE_SECTION}}", renderFixedPriceSection(data));
 
   return html;
 }
