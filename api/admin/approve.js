@@ -39,7 +39,16 @@ module.exports = async function handler(req, res) {
       approved_at: approvedAt,
     };
     if (reviewedInputs  !== null) updatePayload.reviewed_inputs  = reviewedInputs;
-    if (reviewedOutputs !== null) updatePayload.reviewed_outputs = reviewedOutputs;
+    if (reviewedOutputs !== null) {
+      updatePayload.reviewed_outputs = reviewedOutputs;
+      const low  = reviewedOutputs.lowFmt  || reviewedOutputs.low;
+      const high = reviewedOutputs.highFmt || reviewedOutputs.high;
+      const wks  = reviewedOutputs.totalWks;
+      const risk = reviewedOutputs.risk || "unknown";
+      if (low && high) {
+        updatePayload.estimate_text = `${low} - ${high} | ${wks} weeks | ${risk} complexity`;
+      }
+    }
     if (contingencyPct  !== null) updatePayload.contingency_pct  = contingencyPct;
     if (finalLow        !== null) updatePayload.final_low        = finalLow;
     if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
