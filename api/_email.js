@@ -1,39 +1,39 @@
-/**
- * _email.js — Sends the approved estimate PDF to the client via Postmark.
- *
- * Requires POSTMARK_API_KEY environment variable.
- * If the key is not set, the function logs a warning and returns without sending.
- */
+const nodemailer = require("nodemailer");
 
-const postmark = require("postmark");
-
-const FROM_ADDRESS = process.env.POSTMARK_FROM_ADDRESS || "info@zclap.com";
+const FROM_ADDRESS = process.env.SMTP_FROM || process.env.SMTP_USER || "info@zclap.com";
 const FROM_NAME = "ZCLAP";
 
-/**
- * Send the estimate PDF to the client.
- *
- * @param {object} record - Full Supabase record
- * @param {Buffer} pdfBuffer - Generated PDF buffer
- * @returns {{ sent: boolean, error?: string }}
- */
-async function sendEstimateEmail(record, pdfBuffer) {
-  const apiKey = process.env.POSTMARK_API_KEY;
+function createTransport() {
+  const host = process.env.SMTP_HOST;
+  const port = parseInt(process.env.SMTP_PORT || "587", 10);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASSWORD;
 
-  if (!apiKey) {
-    console.warn("[email] POSTMARK_API_KEY not set — skipping email send.");
-    return { sent: false, error: "POSTMARK_API_KEY not configured" };
+  if (!host || !user || !pass) {
+    return null;
   }
 
-  const client = new postmark.ServerClient(apiKey);
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: port === 465,
+    auth: { user, pass },
+  });
+}
+
+async function sendEstimateEmail(record, pdfBuffer) {
+  const transporter = createTransport();
+
+  if (!transporter) {
+    console.warn("[email] SMTP_HOST / SMTP_USER / SMTP_PASSWORD not set — skipping email send.");
+    return { sent: false, error: "SMTP not configured" };
+  }
 
   const firstName = record.first_name || "there";
-  const estimatorType =
-    record.estimator_type
-      ? record.estimator_type.charAt(0).toUpperCase() + record.estimator_type.slice(1)
-      : "Implementation";
+  const estimatorType = record.estimator_type
+    ? record.estimator_type.charAt(0).toUpperCase() + record.estimator_type.slice(1)
+    : "Implementation";
 
-  // Build cost range string for email body
   const out = record.reviewed_outputs || record.outputs || {};
   const finalLow = record.final_low;
   const finalHigh = record.final_high;
@@ -82,25 +82,25 @@ async function sendEstimateEmail(record, pdfBuffer) {
   const textBody = `Hi ${firstName},\n\nThank you for your interest in ZCLAP's MDM services. Please find your ${estimatorType} estimate attached.\n\n${costLine}\n\nIf you have any questions, reply to this email or reach us at info@zclap.com.\n\nZCLAP · zclap.com`;
 
   try {
-    const result = await client.sendEmail({
-      From: `${FROM_NAME} <${FROM_ADDRESS}>`,
-      To: record.email,
-      Subject: subject,
-      HtmlBody: htmlBody,
-      TextBody: textBody,
-      Attachments: [
+    const info = await transporter.sendMail({
+      from: `${FROM_NAME} <${FROM_ADDRESS}>`,
+      to: record.email,
+      subject,
+      html: htmlBody,
+      text: textBody,
+      attachments: [
         {
-          Name: `ZCLAP-MDM-Estimate.pdf`,
-          Content: pdfBuffer.toString("base64"),
-          ContentType: "application/pdf",
+          filename: "ZCLAP-MDM-Estimate.pdf",
+          content: pdfBuffer,
+          contentType: "application/pdf",
         },
       ],
     });
 
-    console.log(`[email] Sent to ${record.email}, MessageID: ${result.MessageID}`);
-    return { sent: true, messageId: result.MessageID };
+    console.log(`[email] Sent to ${record.email}, messageId: ${info.messageId}`);
+    return { sent: true, messageId: info.messageId };
   } catch (err) {
-    console.error("[email] Postmark error:", err);
+    console.error("[email] SMTP error:", err);
     return { sent: false, error: String(err.message || err) };
   }
 }
