@@ -237,7 +237,7 @@
       const locationText = locationParts.length ? locationParts.join(", ") : "Unknown";
       const approveBtn = item.status === "pending"
         ? `<button class="btn-approve" style="background:var(--bg);color:var(--dark);border:1px solid var(--border);margin-right:6px" data-review-id="${esc(item.id)}">Review</button>`
-        : "";
+        : `<span class="status done" style="margin-right:6px;font-weight:700;">Approved</span>`;
       const pdfBtn = `<button class="btn-approve" style="background:none;color:var(--mid);border:1px solid var(--border);margin-right:6px" data-pdf-id="${esc(item.id)}" title="Download PDF">⬇ PDF</button>`;
       const doneMeta = item.status === "done" ? `<div class="row"><span>Approved by: ${esc(item.approvedBy || "-")}</span><span>Approved at: ${esc(approvedAt)}</span></div>` : "";
       const emailStatus = item.emailStatus || "queued";
@@ -582,6 +582,21 @@
       const pct = rv.contingency || 0;
       const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
       const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
+
+      // Update local item status immediately
+      targetItem.status = "done";
+      targetItem.approvedBy = "Admin";
+      targetItem.approvedAt = new Date().toISOString();
+      targetItem.estimateText = `$${finalLow.toLocaleString('en-US')} - $${finalHigh.toLocaleString('en-US')} | ${r.totalWks} weeks | ${r.risk} complexity`;
+
+      // Move item from pending to done list locally
+      data.pending = (data.pending || []).filter(item => item.id !== targetItem.id);
+      data.done = [targetItem, ...(data.done || [])];
+
+      renderList("pending-list", data.pending || [], "No pending requests.");
+      renderList("done-list", data.done || [], "No completed requests.");
+      bindReviewButtons();
+      bindPdfButtons();
 
       // Close review window IMMEDIATELY
       closeReview();
