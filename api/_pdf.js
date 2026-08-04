@@ -245,7 +245,8 @@ async function generateEstimatePDF(record) {
     const pdf = await page.pdf({
       format: "A4",
       printBackground: true,
-      margin: { top: "10mm", right: "12mm", bottom: "11mm", left: "12mm" },
+      preferCSSPageSize: true,
+      margin: { top: "0mm", right: "0mm", bottom: "0mm", left: "0mm" },
     });
     return pdf;
   } finally {

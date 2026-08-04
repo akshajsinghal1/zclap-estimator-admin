@@ -8,25 +8,12 @@
   <style>
     /* ------------------------------------------------------------------
        ZCLAP MDM Estimate Template
-       Designed for browser preview and WeasyPrint PDF generation.
-       Replace {PLACEHOLDERS} from backend before rendering.
+       Strict 2-Page Layout for Puppeteer & Web PDF Generation.
     ------------------------------------------------------------------ */
 
     @page {
       size: A4;
-      margin: 10mm 12mm 11mm 12mm;
-
-      @bottom-left {
-        content: "ZCLAP | Analyze This";
-        color: #8b93a7;
-        font-size: 9px;
-      }
-
-      @bottom-right {
-        content: "Indicative estimate | Page " counter(page) " of " counter(pages);
-        color: #8b93a7;
-        font-size: 9px;
-      }
+      margin: 0;
     }
 
     @font-face {
@@ -64,12 +51,9 @@
       --accent-2: #c9531f;
       --navy: #17324d;
       --green: #15803d;
-      --blue: #1d4ed8;
-      --red: #b91c1c;
-      --shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-      --radius-xl: 16px;
-      --radius-lg: 12px;
-      --radius-md: 8px;
+      --radius-xl: 14px;
+      --radius-lg: 10px;
+      --radius-md: 6px;
     }
 
     * {
@@ -83,32 +67,40 @@
       background: #ffffff;
       color: #0f172a;
       font-family: "ZclapSans", "DejaVu Sans", sans-serif;
-      font-size: 11pt;
-      line-height: 1.5;
+      font-size: 10.5pt;
+      line-height: 1.45;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
-    body {
-      min-height: 100vh;
-    }
-
-    .page {
+    .pdf-page {
       width: 210mm;
-      min-height: 297mm;
-      margin: 0 auto;
-      padding: 16mm 14mm 16mm;
-      position: relative;
+      height: 297mm;
+      padding: 10mm 12mm 10mm 12mm;
+      box-sizing: border-box;
       overflow: hidden;
+      page-break-after: always;
+      break-after: page;
       background: #ffffff;
-    }
-
-    .page::before,
-    .page::after {
-      display: none;
-    }
-
-    .content {
       position: relative;
-      z-index: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+    }
+
+    .pdf-page:last-child {
+      page-break-after: avoid;
+      break-after: avoid;
+    }
+
+    .page-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: 8px;
+      border-top: 1px solid #e2e8f0;
+      font-size: 8.5pt;
+      color: #64748b;
     }
 
     .topbar {
@@ -116,74 +108,68 @@
       align-items: center;
       justify-content: space-between;
       gap: 20px;
-      margin-bottom: 20px;
+      margin-bottom: 14px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 14px;
+      gap: 12px;
     }
 
     .brand-logo {
-      width: 130px;
+      width: 120px;
       height: auto;
       display: block;
     }
 
     .brand-line {
-      height: 32px;
+      height: 28px;
       width: 1px;
       background: #e2e8f0;
     }
 
     .brand-text {
       color: var(--muted);
-      font-size: 10.5pt;
+      font-size: 10pt;
       letter-spacing: 0.12em;
       text-transform: uppercase;
       font-weight: 600;
     }
 
     .doc-chip {
-      padding: 7px 14px;
+      padding: 6px 12px;
       border: 1px solid rgba(228, 98, 42, 0.35);
       color: #c9531f;
       border-radius: 999px;
       background: #fff8f5;
-      font-size: 10.5pt;
+      font-size: 10pt;
       font-weight: 700;
       letter-spacing: 0.08em;
       text-transform: uppercase;
       white-space: nowrap;
     }
 
-    .hero {
-      display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
-      gap: 16px;
-      margin-bottom: 18px;
-    }
-
     .hero-card {
       background: #f8fafc;
       border: 1px solid #e2e8f0;
       border-radius: var(--radius-xl);
-      padding: 20px;
+      padding: 16px 18px;
+      margin-bottom: 14px;
     }
 
     .eyebrow {
       color: #c9531f;
-      font-size: 9.5pt;
+      font-size: 9pt;
       font-weight: 700;
       letter-spacing: 0.14em;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 6px;
     }
 
     h1 {
-      margin: 0 0 10px;
-      font-size: 24pt;
+      margin: 0 0 8px;
+      font-size: 22pt;
       line-height: 1.15;
       letter-spacing: -0.02em;
       color: #17324d;
@@ -192,146 +178,73 @@
     .subtitle {
       margin: 0;
       color: #334155;
-      font-size: 11pt;
-      line-height: 1.5;
+      font-size: 10pt;
+      line-height: 1.45;
     }
 
     .prepared-card {
       background: #ffffff;
       border: 1px solid #e2e8f0;
       border-radius: var(--radius-lg);
-      padding: 14px 16px;
-      margin-top: 16px;
+      padding: 12px 14px;
+      margin-top: 12px;
       display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 12px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px 16px;
     }
 
     .field-label {
       color: #64748b;
-      font-size: 9pt;
+      font-size: 8.5pt;
       font-weight: 700;
-      letter-spacing: 0.1em;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     .field-value {
-      font-size: 11pt;
+      font-size: 10.5pt;
       color: #0f172a;
       font-weight: 650;
-    }
-
-    .estimate-card {
-      background: linear-gradient(160deg, #fff8f5 0%, #f8fafc 100%);
-      border: 1.5px solid #e4622a;
-      border-radius: var(--radius-xl);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-    }
-
-    .metric-label {
-      color: #475569;
-      font-size: 9.5pt;
-      font-weight: 700;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-    }
-
-    .cost-range {
-      font-size: 26pt;
-      line-height: 1.1;
-      letter-spacing: -0.03em;
-      font-weight: 800;
-      color: #17324d;
-      margin-bottom: 14px;
-    }
-
-    .metric-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-top: 10px;
-    }
-
-    .mini-metric {
-      border: 1px solid #e2e8f0;
-      background: #ffffff;
-      border-radius: var(--radius-md);
-      padding: 10px 12px;
-    }
-
-    .mini-metric strong {
-      display: block;
-      font-size: 14pt;
-      letter-spacing: -0.01em;
-      color: #0f172a;
-      margin-top: 2px;
-    }
-
-    .complexity {
-      margin-top: 12px;
-      padding: 12px;
-      border-radius: var(--radius-md);
-      border: 1px solid #e2e8f0;
-      background: #ffffff;
-    }
-
-    .complexity-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 6px;
     }
 
     .badge {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 10px;
+      gap: 5px;
+      padding: 3px 8px;
       border-radius: 999px;
       background: #e6f4ea;
       color: #137333;
       border: 1px solid #ceead6;
       font-weight: 800;
-      font-size: 10pt;
+      font-size: 9.5pt;
       text-transform: uppercase;
-      letter-spacing: 0.08em;
+      letter-spacing: 0.06em;
     }
 
     .badge::before {
       content: "";
-      width: 6px;
-      height: 6px;
+      width: 5px;
+      height: 5px;
       border-radius: 999px;
       background: currentColor;
     }
 
-    .complexity p {
-      margin: 0;
-      color: #334155;
-      font-size: 10.5pt;
-    }
-
     .section {
-      margin-top: 16px;
+      margin-top: 12px;
       border: 1px solid #e2e8f0;
       border-radius: var(--radius-xl);
       background: #ffffff;
       overflow: hidden;
-      break-inside: avoid;
     }
 
     .section-header {
       display: flex;
       justify-content: space-between;
       align-items: flex-end;
-      gap: 16px;
-      padding: 14px 18px;
+      gap: 14px;
+      padding: 10px 14px;
       border-bottom: 1px solid #e2e8f0;
       background: #f8fafc;
     }
@@ -339,22 +252,22 @@
     .section-kicker {
       color: #c9531f;
       text-transform: uppercase;
-      font-size: 9pt;
-      letter-spacing: 0.14em;
+      font-size: 8.5pt;
+      letter-spacing: 0.12em;
       font-weight: 800;
-      margin-bottom: 3px;
+      margin-bottom: 2px;
     }
 
     h2 {
       margin: 0;
-      font-size: 15pt;
+      font-size: 13.5pt;
       color: #17324d;
       letter-spacing: -0.01em;
     }
 
     .section-note {
       color: #475569;
-      font-size: 10pt;
+      font-size: 9pt;
       max-width: 280px;
       text-align: right;
     }
@@ -367,15 +280,15 @@
 
     th,
     td {
-      padding: 9px 14px;
+      padding: 7px 12px;
       border-bottom: 1px solid #e2e8f0;
-      vertical-align: top;
+      vertical-align: middle;
     }
 
     th {
       color: #334155;
-      font-size: 10pt;
-      letter-spacing: 0.1em;
+      font-size: 9pt;
+      letter-spacing: 0.08em;
       text-transform: uppercase;
       font-weight: 700;
       text-align: left;
@@ -383,7 +296,7 @@
     }
 
     td {
-      font-size: 11pt;
+      font-size: 10pt;
       color: #0f172a;
     }
 
@@ -397,13 +310,13 @@
 
     .input-cell {
       color: #334155;
-      width: 46%;
+      width: 44%;
     }
 
     .value-cell {
       color: #0f172a;
       font-weight: 650;
-      width: 54%;
+      width: 56%;
     }
 
     .only-modernization {
@@ -415,7 +328,7 @@
     .pill-list {
       display: flex;
       flex-wrap: wrap;
-      gap: 6px;
+      gap: 4px;
     }
 
     .pill {
@@ -425,8 +338,8 @@
       background: #f1f5f9;
       color: #0f172a;
       border-radius: 999px;
-      padding: 3px 9px;
-      font-size: 10pt;
+      padding: 2px 8px;
+      font-size: 9pt;
       font-weight: 650;
     }
 
@@ -434,18 +347,18 @@
       display: grid;
       grid-template-columns: repeat(4, 1fr);
       gap: 10px;
-      padding: 16px 18px;
+      padding: 12px 14px;
     }
 
     .breakdown-item {
       border: 1px solid #e2e8f0;
       border-radius: var(--radius-md);
-      padding: 12px;
+      padding: 10px;
       background: #f8fafc;
     }
 
     .breakdown-item .number {
-      font-size: 18pt;
+      font-size: 16pt;
       font-weight: 800;
       color: #17324d;
       margin-bottom: 2px;
@@ -453,16 +366,15 @@
 
     .breakdown-item .label {
       color: #475569;
-      font-size: 10pt;
+      font-size: 9pt;
       font-weight: 600;
     }
 
     .footer-note {
-      margin-top: 16px;
+      margin-top: 12px;
       display: grid;
-      grid-template-columns: 1fr 0.75fr;
-      gap: 14px;
-      break-inside: avoid;
+      grid-template-columns: 1.2fr 0.8fr;
+      gap: 12px;
     }
 
     .disclaimer,
@@ -470,13 +382,13 @@
       border-radius: var(--radius-lg);
       border: 1px solid #e2e8f0;
       background: #f8fafc;
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
 
     .disclaimer h3,
     .contact h3 {
-      margin: 0 0 6px;
-      font-size: 11pt;
+      margin: 0 0 4px;
+      font-size: 10.5pt;
       color: #17324d;
     }
 
@@ -484,78 +396,27 @@
     .contact p {
       margin: 0;
       color: #334155;
-      font-size: 10.5pt;
-      line-height: 1.5;
+      font-size: 9.5pt;
+      line-height: 1.45;
     }
 
     .contact strong {
       color: #0f172a;
     }
 
-    .watermark {
-      display: none;
-    }
-
-    @media screen {
-      body {
-        background: #e2e8f0;
-        padding: 24px 0;
-      }
-
-      .page {
-        box-shadow: 0 10px 40px rgba(0,0,0,0.08);
-      }
-    }
-
     @media print {
-      body, .page {
+      body, .pdf-page {
         background: #ffffff !important;
         color: #0f172a !important;
-      }
-
-      .page {
-        width: auto;
-        min-height: auto;
-        margin: 0;
-        padding: 0;
-        box-shadow: none;
-      }
-
-      th, td, p, li, div, span {
-        font-size: 11pt !important;
-        line-height: 1.5 !important;
-        color: #0f172a !important;
-      }
-
-      .field-label, .metric-label, .section-kicker, .eyebrow {
-        font-size: 9.5pt !important;
-        font-weight: 700 !important;
-        color: #334155 !important;
-      }
-
-      h1 { font-size: 22pt !important; color: #17324d !important; }
-      h2 { font-size: 14pt !important; color: #17324d !important; }
-      .cost-range { font-size: 24pt !important; color: #17324d !important; }
-
-      ul li {
-        color: #1e293b !important;
-      }
-
-      .section,
-      .hero-card,
-      .estimate-card,
-      .footer-note {
-        break-inside: avoid;
       }
     }
   </style>
 </head>
 
 <body>
-  <main class="page">
-    <div class="watermark">MDM</div>
-
-    <div class="content">
+  <!-- ==================== PAGE 1 ==================== -->
+  <div class="pdf-page">
+    <div>
       <header class="topbar">
         <div class="brand">
           <img class="brand-logo" src="logo/zclap-logo.svg" alt="ZCLAP logo" />
@@ -566,55 +427,40 @@
         <div class="doc-chip">QUOTE #{{QUOTE_ID}}</div>
       </header>
 
-      <section class="hero">
-        <div class="hero-card">
-          <div class="eyebrow">Prepared estimate</div>
-          <h1>{{ESTIMATE_TITLE}}</h1>
-          <p class="subtitle">
-            A structured indicative estimate based on the selected MDM scope, integration pattern,
-            workflow needs, data volume, enrichment services, and modernization-specific requirements.
-          </p>
+      <section class="hero-card">
+        <div class="eyebrow">Prepared estimate</div>
+        <h1>{{ESTIMATE_TITLE}}</h1>
+        <p class="subtitle">
+          A structured indicative estimate based on the selected MDM scope, integration pattern,
+          workflow needs, data volume, enrichment services, and modernization-specific requirements.
+        </p>
 
-          <div class="prepared-card">
-            <div>
-              <div class="field-label">Prepared for</div>
-              <div class="field-value">{{CLIENT_FIRST_NAME}} {{CLIENT_LAST_NAME}}</div>
-            </div>
-            <div>
-              <div class="field-label">Company</div>
-              <div class="field-value">{{CLIENT_COMPANY}}</div>
-            </div>
-            <div>
-              <div class="field-label">Role</div>
-              <div class="field-value">{{CLIENT_ROLE}}</div>
-            </div>
-            <div>
-              <div class="field-label">Date</div>
-              <div class="field-value">{{ESTIMATE_DATE}}</div>
-            </div>
+        <div class="prepared-card">
+          <div>
+            <div class="field-label">Prepared for</div>
+            <div class="field-value">{{CLIENT_FIRST_NAME}} {{CLIENT_LAST_NAME}}</div>
+          </div>
+          <div>
+            <div class="field-label">Company</div>
+            <div class="field-value">{{CLIENT_COMPANY}}</div>
+          </div>
+          <div>
+            <div class="field-label">Role</div>
+            <div class="field-value">{{CLIENT_ROLE}}</div>
+          </div>
+          <div>
+            <div class="field-label">Date</div>
+            <div class="field-value">{{ESTIMATE_DATE}}</div>
+          </div>
+          <div>
+            <div class="field-label">Timeline</div>
+            <div class="field-value">{{TIMELINE_WEEKS}}</div>
+          </div>
+          <div>
+            <div class="field-label">Complexity</div>
+            <div class="field-value"><span class="badge">{{COMPLEXITY_LEVEL}}</span></div>
           </div>
         </div>
-
-        <aside class="estimate-card">
-          <div class="metric-grid" style="margin-top:0;">
-            <div class="mini-metric">
-              <div class="metric-label">Timeline</div>
-              <strong>{{TIMELINE_WEEKS}}</strong>
-            </div>
-            <div class="mini-metric">
-              <div class="metric-label">Estimator</div>
-              <strong>{{ESTIMATOR_TYPE}}</strong>
-            </div>
-          </div>
-
-          <div class="complexity" style="margin-top:12px;">
-            <div class="complexity-row">
-              <div class="metric-label" style="margin:0;">Complexity</div>
-              <span class="badge">{{COMPLEXITY_LEVEL}}</span>
-            </div>
-            <p>{{COMPLEXITY_DESCRIPTION}}</p>
-          </div>
-        </aside>
       </section>
 
       <section class="section">
@@ -624,7 +470,7 @@
             <h2>Inputs used for this estimate</h2>
           </div>
           <div class="section-note">
-            Values shown below are the main estimation drivers submitted through the form.
+            Values submitted through the estimation form.
           </div>
         </div>
 
@@ -701,7 +547,7 @@
             <div class="section-kicker">Deliverable totals</div>
             <h2>Scope breakdown</h2>
           </div>
-          <div class="section-note">Rolled-up counts used to drive the estimate.</div>
+          <div class="section-note">Rolled-up counts driving the estimate.</div>
         </div>
         <div class="breakdown">
           <div class="breakdown-item">
@@ -722,17 +568,36 @@
           </div>
         </div>
       </section>
+    </div>
 
-      <!-- Page 2 Starts Here: Key assumptions -->
-      <section class="section" style="page-break-before: always; break-before: page;">
+    <div class="page-footer">
+      <span>ZCLAP | Analyze This</span>
+      <span>Indicative estimate | Page 1 of 2</span>
+    </div>
+  </div>
+
+  <!-- ==================== PAGE 2 ==================== -->
+  <div class="pdf-page">
+    <div>
+      <header class="topbar" style="margin-bottom:10px;">
+        <div class="brand">
+          <img class="brand-logo" src="logo/zclap-logo.svg" alt="ZCLAP logo" />
+          <div class="brand-line"></div>
+          <div class="brand-text">MDM Estimate Generator</div>
+        </div>
+
+        <div class="doc-chip">QUOTE #{{QUOTE_ID}}</div>
+      </header>
+
+      <section class="section" style="margin-top:0;">
         <div class="section-header">
           <div>
             <div class="section-kicker">Estimation basis</div>
             <h2>Key assumptions</h2>
           </div>
-          <div class="section-note">Changes to these assumptions may require a revised estimate.</div>
+          <div class="section-note">Changes to assumptions may require revised estimate.</div>
         </div>
-        <ul style="margin:0;padding:14px 18px 16px 32px;color:#334155;font-size:10.5pt;line-height:1.65;">
+        <ul style="margin:0;padding:12px 16px 14px 28px;color:#334155;font-size:10pt;line-height:1.6;">
           <li>The project team will follow a hybrid delivery model using a mix of onshore and offshore resources.</li>
           <li>Workflows will use out-of-the-box options, including one-step, two-step, or four-step workflows.</li>
           <li>Reference data will be managed in Reference 360 through the Data Stewards interface.</li>
@@ -767,6 +632,11 @@
         </div>
       </section>
     </div>
-  </main>
+
+    <div class="page-footer">
+      <span>ZCLAP | Analyze This</span>
+      <span>Indicative estimate | Page 2 of 2</span>
+    </div>
+  </div>
 </body>
 </html>
