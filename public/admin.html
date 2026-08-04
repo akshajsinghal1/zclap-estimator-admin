@@ -428,7 +428,7 @@
       const risk = rs <= 2 ? 'Low' : rs <= 5 ? 'Medium' : 'High';
 
       return { low, high, totalWks, risk,
-        lowFmt: '$' + low.toLocaleString(), highFmt: '$' + high.toLocaleString() };
+        lowFmt: '$' + Math.round(low).toLocaleString('en-US'), highFmt: '$' + Math.round(high).toLocaleString('en-US') };
     }
 
     // ── Review state ──────────────────────────────────────────────
@@ -550,7 +550,7 @@
       rv.contingency = pct;
       const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
       const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
-      const fmtK = n => '$' + n.toLocaleString();
+      const fmtK = n => '$' + Math.round(n).toLocaleString('en-US');
 
       document.getElementById('rv-result').innerHTML = `
         <div class="res-block">
@@ -576,37 +576,34 @@
 
     async function submitReview() {
       if (!rv.item) return;
-      const btn = document.getElementById('rv-approve-btn');
-      btn.disabled = true; btn.textContent = 'Approving...';
+      const targetItem = rv.item;
 
       const r = calcFromInputs(rv.inp, rv.type);
       const pct = rv.contingency || 0;
       const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
       const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
 
-      try {
-        const res = await fetch('/api/admin/approve', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            requestId:       rv.item.id,
-            reviewedInputs:  rv.inp,
-            reviewedOutputs: { ...r },
-            contingencyPct:  pct,
-            finalLow,
-            finalHigh,
-          }),
-        });
-        if (!res.ok) {
-          const body = await res.json().catch(() => ({}));
-          throw new Error(body.error || 'Unable to approve');
-        }
-        closeReview();
-        await loadRequests();
-      } catch (err) {
-        btn.disabled = false; btn.textContent = 'Approve & Finalise →';
-        alert(err.message || 'Unable to approve request');
-      }
+      // Close review window IMMEDIATELY
+      closeReview();
+
+      // Fire background approval API request
+      fetch('/api/admin/approve', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          requestId:       targetItem.id,
+          reviewedInputs:  rv.inp,
+          reviewedOutputs: { ...r },
+          contingencyPct:  pct,
+          finalLow,
+          finalHigh,
+        }),
+      })
+      .then(() => loadRequests())
+      .catch((err) => {
+        console.error("Background approval error:", err);
+        loadRequests();
+      });
     }
 
     function bindTabs() {

@@ -42,7 +42,7 @@ async function sendEstimateEmail(record, pdfBuffer) {
 
   let costLine = "";
   if (finalLow != null && finalHigh != null) {
-    costLine = `Fixed-price quote: $${Number(finalLow).toLocaleString()} – $${Number(finalHigh).toLocaleString()}`;
+    costLine = `Fixed-price quote: $${Number(finalLow).toLocaleString("en-US")} – $${Number(finalHigh).toLocaleString("en-US")}`;
   } else if (out.lowFmt && out.highFmt) {
     costLine = `Indicative range: ${out.lowFmt} – ${out.highFmt}`;
   }
@@ -54,8 +54,6 @@ async function sendEstimateEmail(record, pdfBuffer) {
 <html>
 <head><meta charset="utf-8" /></head>
 <body style="font-family:sans-serif;color:#1a1a1a;max-width:600px;margin:0 auto;padding:32px 24px;">
-  <img src="cid:logo" alt="ZCLAP" style="height:36px;margin-bottom:28px;" />
-
   <h2 style="font-size:22px;margin:0 0 12px;">Hi ${firstName},</h2>
 
   <p style="font-size:15px;line-height:1.6;color:#444;margin:0 0 16px;">
@@ -75,9 +73,12 @@ async function sendEstimateEmail(record, pdfBuffer) {
     We look forward to working with you.
   </p>
 
-  <p style="font-size:14px;color:#888;border-top:1px solid #eee;padding-top:20px;margin:0;">
-    ZCLAP · <a href="https://zclap.com" style="color:#888;">zclap.com</a>
-  </p>
+  <div style="border-top:1px solid #eee;padding-top:20px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;">
+    <p style="font-size:14px;color:#888;margin:0;">
+      ZCLAP · <a href="https://zclap.com" style="color:#888;">zclap.com</a>
+    </p>
+    <img src="cid:logo" alt="ZCLAP" style="height:32px;display:block;margin-top:12px;" />
+  </div>
 </body>
 </html>`;
 
