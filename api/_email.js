@@ -73,12 +73,16 @@ async function sendEstimateEmail(record, pdfBuffer) {
     We look forward to working with you.
   </p>
 
-  <div style="border-top:1px solid #eee;padding-top:20px;margin-top:20px;display:flex;align-items:center;justify-content:space-between;">
-    <p style="font-size:14px;color:#888;margin:0;">
-      ZCLAP · <a href="https://zclap.com" style="color:#888;">zclap.com</a>
-    </p>
-    <img src="cid:logo" alt="ZCLAP" style="height:32px;display:block;margin-top:12px;" />
-  </div>
+  <table width="100%" border="0" cellspacing="0" cellpadding="0" style="border-top:1px solid #eee;margin-top:24px;padding-top:20px;">
+    <tr>
+      <td align="left" valign="middle">
+        <img src="cid:logo" alt="ZCLAP" style="height:48px;width:auto;display:block;border:0;" />
+      </td>
+      <td align="right" valign="middle" style="font-size:14px;color:#888;">
+        ZCLAP &middot; <a href="https://zclap.com" style="color:#888;text-decoration:none;">zclap.com</a>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>`;
 
