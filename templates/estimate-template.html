@@ -563,7 +563,7 @@
           <div class="brand-text">MDM Estimate Generator</div>
         </div>
 
-        <div class="doc-chip">Quote #{{QUOTE_ID}} &bull; {{ESTIMATOR_TYPE}}</div>
+        <div class="doc-chip">QUOTE #{{QUOTE_ID}}</div>
       </header>
 
       <section class="hero">
@@ -596,23 +596,18 @@
         </div>
 
         <aside class="estimate-card">
-          <div>
-            <div class="metric-label">Estimated fixed-price range</div>
-            <div class="cost-range">{{COST_RANGE}}</div>
-
-            <div class="metric-grid">
-              <div class="mini-metric">
-                <div class="metric-label">Timeline</div>
-                <strong>{{TIMELINE_WEEKS}}</strong>
-              </div>
-              <div class="mini-metric">
-                <div class="metric-label">Estimator</div>
-                <strong>{{ESTIMATOR_TYPE}}</strong>
-              </div>
+          <div class="metric-grid" style="margin-top:0;">
+            <div class="mini-metric">
+              <div class="metric-label">Timeline</div>
+              <strong>{{TIMELINE_WEEKS}}</strong>
+            </div>
+            <div class="mini-metric">
+              <div class="metric-label">Estimator</div>
+              <strong>{{ESTIMATOR_TYPE}}</strong>
             </div>
           </div>
 
-          <div class="complexity">
+          <div class="complexity" style="margin-top:12px;">
             <div class="complexity-row">
               <div class="metric-label" style="margin:0;">Complexity</div>
               <span class="badge">{{COMPLEXITY_LEVEL}}</span>
@@ -728,8 +723,8 @@
         </div>
       </section>
 
-      <!-- Key assumptions -->
-      <section class="section">
+      <!-- Page 2 Starts Here: Key assumptions -->
+      <section class="section" style="page-break-before: always; break-before: page;">
         <div class="section-header">
           <div>
             <div class="section-kicker">Estimation basis</div>
@@ -737,7 +732,7 @@
           </div>
           <div class="section-note">Changes to these assumptions may require a revised estimate.</div>
         </div>
-        <ul style="margin:0;padding:16px 20px 18px 36px;color:#334155;font-size:11pt;line-height:1.75;">
+        <ul style="margin:0;padding:14px 18px 16px 32px;color:#334155;font-size:10.5pt;line-height:1.65;">
           <li>The project team will follow a hybrid delivery model using a mix of onshore and offshore resources.</li>
           <li>Workflows will use out-of-the-box options, including one-step, two-step, or four-step workflows.</li>
           <li>Reference data will be managed in Reference 360 through the Data Stewards interface.</li>
@@ -750,7 +745,7 @@
         </ul>
       </section>
 
-      <!-- Fixed-price quote section — injected by Python renderer when final_low/final_high are set -->
+      <!-- Fixed-price quote section -->
       {{FIXED_PRICE_SECTION}}
 
       <section class="footer-note">

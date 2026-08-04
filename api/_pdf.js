@@ -55,31 +55,23 @@ function renderFixedPriceSection(data) {
 
   const pctLabel =
     data.contingency_pct != null
-      ? `Includes ${escapeHtml(data.contingency_pct)}% fixed-price contingency applied to T&amp;M estimate`
+      ? `Includes ${escapeHtml(data.contingency_pct)}% fixed-price contingency`
       : "Fixed-price quote reviewed and approved by ZCLAP";
 
-  const tmRange = escapeHtml(data.cost_range || "TBD");
   const finalLow = escapeHtml(formatCurrency(data.final_low));
   const finalHigh = escapeHtml(formatCurrency(data.final_high));
 
   return `
-    <section class="section" style="border-color:rgba(245,130,32,0.35);margin-top:18px;">
-      <div class="section-header" style="background:linear-gradient(90deg,rgba(245,130,32,0.12),rgba(245,130,32,0.04));">
+    <section class="section" style="border:1.5px solid #e4622a;margin-top:14px;">
+      <div class="section-header" style="background:#fff8f5;padding:10px 16px;">
         <div>
-          <div class="section-kicker">Fixed-price quote</div>
-          <h2>Final quoted price</h2>
+          <div class="section-kicker" style="color:#c9531f;">Fixed-price quote</div>
+          <h2 style="color:#17324d;font-size:14pt;">Final Quoted Price</h2>
         </div>
         <div class="section-note">${pctLabel}</div>
       </div>
-      <div style="padding:20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;align-items:center;">
-        <div>
-          <div class="metric-label">T&amp;M estimate range</div>
-          <div style="font-size:20px;font-weight:800;letter-spacing:-0.03em;color:var(--text);">${tmRange}</div>
-        </div>
-        <div style="background:rgba(245,130,32,0.1);border:1px solid rgba(245,130,32,0.32);border-radius:12px;padding:16px;">
-          <div class="metric-label" style="color:var(--accent-2);">Fixed-price quote</div>
-          <div style="font-size:24px;font-weight:800;letter-spacing:-0.03em;color:var(--accent-2);">${finalLow} &ndash; ${finalHigh}</div>
-        </div>
+      <div style="padding:16px;background:#ffffff;text-align:center;">
+        <div style="font-size:24pt;font-weight:800;letter-spacing:-0.02em;color:#17324d;">${finalLow} &ndash; ${finalHigh}</div>
       </div>
     </section>`;
 }
@@ -105,8 +97,12 @@ function buildPdfData(record) {
   const daas = Number(inp.daas || 0);
 
   const compSlug = String(record.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
-  const shortId = String(record.id || "1").slice(0, 4).toUpperCase();
-  const quoteId = `${compSlug}-${shortId}`;
+  let seq = record.quote_seq || record.sequence_no;
+  if (!seq) {
+    const digits = String(record.id || "").replace(/[^0-9]/g, "");
+    seq = digits ? digits.slice(-3) : "1";
+  }
+  const quoteId = `${compSlug}-${seq}`;
 
   return {
     quote_id: quoteId,
