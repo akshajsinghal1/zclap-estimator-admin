@@ -73,7 +73,43 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Return HTTP 200 OK immediately so admin UI transitions instantly
+    // --- Generate PDF + send email (awaited so Vercel serverless function stays active until sent) ---
+    let emailStatus = "not_sent";
+    let emailError = null;
+
+    try {
+      const pdfBuffer = await generateEstimatePDF(approved);
+
+      const emailResult = await sendEstimateEmail(approved, pdfBuffer);
+      if (emailResult.sent) {
+        emailStatus = "sent";
+      } else if (emailResult.error === "SMTP not configured") {
+        emailStatus = "not_sent";
+      } else {
+        emailStatus = "undelivered";
+      }
+      emailError = emailResult.error || null;
+
+      await supabase
+        .from("estimator_requests")
+        .update({
+          email_status: emailStatus,
+          email_error: emailError,
+          sent_at: emailResult.sent ? new Date().toISOString() : null,
+        })
+        .eq("id", requestId);
+
+    } catch (pdfErr) {
+      console.error("PDF/email error (non-fatal):", pdfErr);
+      emailStatus = "not_sent";
+      emailError = String(pdfErr.message || pdfErr);
+
+      await supabase
+        .from("estimator_requests")
+        .update({ email_status: "not_sent", email_error: emailError })
+        .eq("id", requestId);
+    }
+
     res.status(200).json({
       ok: true,
       request: {
@@ -81,47 +117,8 @@ module.exports = async function handler(req, res) {
         status: approved.status,
         approved_by: approved.approved_by,
         approved_at: approved.approved_at,
-        email_status: "queued",
+        email_status: emailStatus,
       },
-    });
-
-    // --- Generate PDF + send email asynchronously in background ---
-    setImmediate(async () => {
-      let emailStatus = "not_sent";
-      let emailError = null;
-
-      try {
-        const pdfBuffer = await generateEstimatePDF(approved);
-
-        const emailResult = await sendEstimateEmail(approved, pdfBuffer);
-        if (emailResult.sent) {
-          emailStatus = "sent";
-        } else if (emailResult.error === "SMTP not configured") {
-          emailStatus = "not_sent";
-        } else {
-          emailStatus = "undelivered";
-        }
-        emailError = emailResult.error || null;
-
-        await supabase
-          .from("estimator_requests")
-          .update({
-            email_status: emailStatus,
-            email_error: emailError,
-            sent_at: emailResult.sent ? new Date().toISOString() : null,
-          })
-          .eq("id", requestId);
-
-      } catch (pdfErr) {
-        console.error("PDF/email error (non-fatal):", pdfErr);
-        emailStatus = "not_sent";
-        emailError = String(pdfErr.message || pdfErr);
-
-        await supabase
-          .from("estimator_requests")
-          .update({ email_status: "not_sent", email_error: emailError })
-          .eq("id", requestId);
-      }
     });
   } catch (err) {
     console.error("Approve API error:", err);
