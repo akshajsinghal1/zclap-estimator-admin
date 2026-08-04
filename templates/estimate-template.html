@@ -787,7 +787,7 @@
           <div class="brand-text">MDM Estimate Generator</div>
         </div>
 
-        <div class="doc-chip">{{ESTIMATOR_TYPE}} Estimate</div>
+        <div class="doc-chip">Quote #{{QUOTE_ID}} &bull; {{ESTIMATOR_TYPE}}</div>
       </header>
 
       <section class="hero">
@@ -961,13 +961,16 @@
           </div>
           <div class="section-note">Changes to these assumptions may require a revised estimate.</div>
         </div>
-        <ul style="margin:0;padding:14px 20px 16px 36px;color:var(--muted);font-size:11px;line-height:1.9;">
-          <li>Workflow will use out-of-the-box options — one step, two steps, or four steps</li>
-          <li>Reference data will be managed in Reference 360 via the Data Stewards interface</li>
-          <li>Real-time sources must be able to call MDM REST APIs</li>
-          <li>Real-time targets must have REST APIs which can be called to push data. For inserting new records, the real-time target must respond synchronously with the new record ID</li>
-          <li>Batch sources must have a way to identify changes since last extract (CDC process, last update date, etc.)</li>
-          <li>MDM data will be egressed as relational-style database tables for batch targets to consume</li>
+        <ul style="margin:0;padding:16px 20px 18px 36px;color:#334155;font-size:11pt;line-height:1.75;">
+          <li>The project team will follow a hybrid delivery model using a mix of onshore and offshore resources.</li>
+          <li>Workflows will use out-of-the-box options, including one-step, two-step, or four-step workflows.</li>
+          <li>Reference data will be managed in Reference 360 through the Data Stewards interface.</li>
+          <li>Real-time source systems must be capable of calling MDM REST APIs.</li>
+          <li>Real-time target systems must expose REST APIs that MDM can call to push data. When inserting new records, the target system must synchronously return the newly generated record ID.</li>
+          <li>Batch source systems must provide a mechanism to identify changes since the previous extract, such as change data capture or a last-updated timestamp.</li>
+          <li>MDM data will be egressed as relational-style database tables for consumption by batch target systems.</li>
+          <li>Job orchestration will be handled through MDM Job Schedules or a third-party scheduler invoking MDM Job APIs.</li>
+          <li>A custom cloud application integration service for job orchestration can be provided at an additional cost.</li>
         </ul>
       </section>
 

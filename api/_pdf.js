@@ -104,7 +104,12 @@ function buildPdfData(record) {
   const createWkfl = Number(inp.createWkfl || 0);
   const daas = Number(inp.daas || 0);
 
+  const compSlug = String(record.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
+  const shortId = String(record.id || "1").slice(0, 4).toUpperCase();
+  const quoteId = `${compSlug}-${shortId}`;
+
   return {
+    quote_id: quoteId,
     estimator_type: record.estimator_type || "Implementation",
     estimate_date: record.approved_at
       ? record.approved_at.split("T")[0]
@@ -171,6 +176,7 @@ function renderHtml(record) {
 
   // Plain-text field substitutions (HTML-escaped)
   const textFields = {
+    QUOTE_ID: data.quote_id,
     ESTIMATOR_TYPE: data.estimator_type,
     ESTIMATE_TITLE: data.estimate_title,
     CLIENT_FIRST_NAME: data.client_first_name,
