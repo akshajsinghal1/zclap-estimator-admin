@@ -45,7 +45,11 @@ async function sendEstimateEmail(record, pdfBuffer) {
 
   const firstName = record.first_name || "there";
   const compSlug = String(record.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
-  const seq = record.quote_seq || record.sequence_no || "1";
+  let seq = record.quote_seq || record.sequence_no;
+  if (!seq) {
+    const digits = String(record.id || "").replace(/[^0-9]/g, "");
+    seq = digits ? digits.slice(-3) : "1";
+  }
   const quoteNumber = record.quote_id || `${compSlug}-${seq}`;
 
   const out = record.reviewed_outputs || record.outputs || {};
@@ -95,8 +99,12 @@ async function sendEstimateEmail(record, pdfBuffer) {
     Any chance you'd be up for 30 minutes next week to walk through it?
   </p>
 
-  <p style="font-size:15px;margin:0 0 24px;color:#374151;">
+  <p style="font-size:15px;margin:0 0 16px;color:#374151;">
     Happy to dig into scope, timeline, or where we'd start.
+  </p>
+
+  <p style="font-size:15px;margin:0 0 24px;color:#374151;">
+    <a href="https://outlook.office.com/bookwithme/user/0f3b381a5df0473d9850870ece3a240e@zclap.com/meetingtype/qsk6DdJyc0C4On90cFntmg2?anonymous&amp;ismsaljsauthenabled&amp;ep=mCardFromTile" style="color:#c9531f;text-decoration:underline;font-weight:600;" target="_blank">Book time with Lynn Weishaupt: Fixed Price Estimate Review</a>
   </p>
 
   <p style="font-size:15px;margin:0 0 4px;color:#111827;">Best,</p>
@@ -118,7 +126,7 @@ async function sendEstimateEmail(record, pdfBuffer) {
 </body>
 </html>`;
 
-  const textBody = `Hi ${firstName},\n\nThanks for running your project through our estimator — the full breakdown is attached (Quote ${quoteNumber}).\n\nBased on what you told us, we'd deliver this as a fixed-price engagement in the range of ${priceRange}, over roughly ${timelineStr}, at ${complexityLevel} complexity. The PDF lays out the scope and the assumptions behind the number.\n\n${complexityParagraph}\n\nA quick word on why that number is fixed. Most MDM work gets quoted time-and-materials, which quietly puts the risk of overruns on you. We do the opposite — we scope tightly up front and commit to a price, so the estimate you're holding is the start of the conversation, not a moving target. It's indicative for now; a short scoping call is all it takes to turn it into a firm proposal.\n\nAny chance you'd be up for 30 minutes next week to walk through it?\n\nHappy to dig into scope, timeline, or where we'd start.\n\nBest,\nLynn Weishaupt\nManaging Director, MDM\nZCLAP — Data tells the story\nlynn.weishaupt@zclap.com`;
+  const textBody = `Hi ${firstName},\n\nThanks for running your project through our estimator — the full breakdown is attached (Quote ${quoteNumber}).\n\nBased on what you told us, we'd deliver this as a fixed-price engagement in the range of ${priceRange}, over roughly ${timelineStr}, at ${complexityLevel} complexity. The PDF lays out the scope and the assumptions behind the number.\n\n${complexityParagraph}\n\nA quick word on why that number is fixed. Most MDM work gets quoted time-and-materials, which quietly puts the risk of overruns on you. We do the opposite — we scope tightly up front and commit to a price, so the estimate you're holding is the start of the conversation, not a moving target. It's indicative for now; a short scoping call is all it takes to turn it into a firm proposal.\n\nAny chance you'd be up for 30 minutes next week to walk through it?\n\nHappy to dig into scope, timeline, or where we'd start.\n\nBook time with Lynn Weishaupt: Fixed Price Estimate Review (https://outlook.office.com/bookwithme/user/0f3b381a5df0473d9850870ece3a240e@zclap.com/meetingtype/qsk6DdJyc0C4On90cFntmg2?anonymous&ismsaljsauthenabled&ep=mCardFromTile)\n\nBest,\nLynn Weishaupt\nManaging Director, MDM\nZCLAP — Data tells the story\nlynn.weishaupt@zclap.com`;
 
   try {
     const info = await transporter.sendMail({
