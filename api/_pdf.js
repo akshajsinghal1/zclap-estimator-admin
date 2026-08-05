@@ -145,25 +145,58 @@ function renderScopeRows(data) {
   return html;
 }
 
+function parseJsonObject(val) {
+  if (!val) return {};
+  if (typeof val === "object" && val !== null) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      return typeof parsed === "object" && parsed !== null ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 // ---------------------------------------------------------------------------
 // Data normalisation — mirrors generate_estimate_pdf.py's normalize_data()
 // ---------------------------------------------------------------------------
 
 function buildPdfData(record) {
-  const inp = record.reviewed_inputs || record.inputs || {};
-  const out = record.reviewed_outputs || record.outputs || {};
+  const rawRevInp = parseJsonObject(record.reviewed_inputs);
+  const rawInp = parseJsonObject(record.inputs);
+  const inp = Object.keys(rawRevInp).length > 0 ? rawRevInp : rawInp;
+
+  const rawRevOut = parseJsonObject(record.reviewed_outputs);
+  const rawOut = parseJsonObject(record.outputs);
+  const out = Object.keys(rawRevOut).length > 0 ? rawRevOut : rawOut;
 
   const risk = out.risk || "medium";
   const complexityLevel = risk.charAt(0).toUpperCase() + risk.slice(1);
 
-  const ootbEntities = Array.isArray(inp.ootb) ? inp.ootb : [];
-  const customEnt = Number(inp.customEnt || 0);
-  const sources = Number(inp.sources || 0);
-  const rtSources = Number(inp.rtSources || 0);
-  const consumers = Number(inp.consumers || 0);
-  const rtConsumers = Number(inp.rtConsumers || 0);
-  const createWkfl = Number(inp.createWkfl || 0);
-  const daas = Number(inp.daas || 0);
+  const rawOotb = inp.ootb ?? inp.ootb_entities ?? inp.entities;
+  const ootbEntities = Array.isArray(rawOotb)
+    ? rawOotb
+    : typeof rawOotb === "string"
+    ? rawOotb.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
+
+  const customEnt = Number(inp.customEnt ?? inp.custom_entities ?? inp.customEnts ?? inp.custom ?? 0);
+  const rels = Number(inp.rels ?? inp.relationships ?? inp.rel ?? 0);
+  const hierarchies = Number(inp.hierarchies ?? inp.hierarchy ?? 0);
+  const sources = Number(inp.sources ?? inp.batch_sources ?? inp.batchSources ?? 0);
+  const rtSources = Number(inp.rtSources ?? inp.real_time_sources ?? inp.rt_sources ?? 0);
+  const consumers = Number(inp.consumers ?? inp.batch_consumers ?? inp.batchConsumers ?? 0);
+  const rtConsumers = Number(inp.rtConsumers ?? inp.real_time_consumers ?? inp.rt_consumers ?? 0);
+  const createWkfl = Number(inp.createWkfl ?? inp.create_workflows ?? inp.createWorkflows ?? inp.workflows ?? 0);
+  const daas = Number(inp.daas ?? inp.daas_services ?? inp.daasServices ?? 0);
+
+  const volume = inp.volume || inp.record_volume || inp.recordCount || "Not specified";
+  const parallelVal = inp.parallelWeeks ?? inp.parallel_testing ?? inp.parallelTesting;
+  const parallelTesting = Number(parallelVal) > 0 ? `${parallelVal} weeks` : (parallelVal || "Not applicable");
+  const legacyHandlingRaw = inp.legacyHandling || inp.legacy_handling || inp.migrationOption || "";
+  const legacyHandling = legacyHandlingRaw || "Not applicable";
 
   const compSlug = String(record.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
   let seq = record.quote_seq || record.sequence_no;
@@ -194,19 +227,18 @@ function buildPdfData(record) {
 
     ootb_entities: ootbEntities,
     custom_entities: customEnt,
-    relationships: Number(inp.rels || 0),
-    hierarchies: Number(inp.hierarchies || 0),
+    relationships: rels,
+    hierarchies: hierarchies,
     batch_source_systems: sources,
     real_time_inbound: rtSources,
     batch_consumers: consumers,
     real_time_consumers: rtConsumers,
     create_workflows: createWkfl,
-    record_volume: inp.volume || "Not specified",
+    record_volume: volume,
     daas_services: daas,
-    parallel_testing:
-      inp.parallelWeeks > 0 ? `${inp.parallelWeeks} weeks` : "Not applicable",
-    legacy_handling_raw: inp.legacyHandling || "",
-    legacy_handling: inp.legacyHandling || "Not applicable",
+    parallel_testing: parallelTesting,
+    legacy_handling_raw: legacyHandlingRaw,
+    legacy_handling: legacyHandling,
 
     // Rolled-up totals
     total_entities: ootbEntities.length + customEnt,
