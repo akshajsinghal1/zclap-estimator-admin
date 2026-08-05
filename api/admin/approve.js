@@ -53,13 +53,29 @@ module.exports = async function handler(req, res) {
     if (finalLow        !== null) updatePayload.final_low        = finalLow;
     if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
 
+    // Fetch target record first to compute and save persistent quote_id
+    const { data: existing } = await supabase
+      .from("estimator_requests")
+      .select("id,company,quote_id,sequence_no")
+      .eq("id", requestId)
+      .maybeSingle();
+
+    if (existing) {
+      const compSlug = String(existing.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
+      let seq = existing.quote_seq || existing.sequence_no;
+      if (!seq) {
+        const digits = String(existing.id || "").replace(/[^0-9]/g, "");
+        seq = digits ? digits.slice(-3) : "1";
+      }
+      updatePayload.quote_id = existing.quote_id || `${compSlug}-${seq}`;
+    }
+
     // Update the record and fetch it back with all fields needed for the PDF
     const { data: approved, error: updateError } = await supabase
       .from("estimator_requests")
       .update(updatePayload)
       .eq("id", requestId)
-      .eq("status", "pending")
-      .select("id,status,approved_by,approved_at,estimator_type,first_name,last_name,email,company,role,inputs,outputs,reviewed_inputs,reviewed_outputs,contingency_pct,final_low,final_high")
+      .select("id,status,approved_by,approved_at,estimator_type,first_name,last_name,email,company,role,inputs,outputs,reviewed_inputs,reviewed_outputs,contingency_pct,final_low,final_high,quote_id")
       .maybeSingle();
 
     if (updateError) {

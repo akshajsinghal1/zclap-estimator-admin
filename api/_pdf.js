@@ -204,7 +204,7 @@ function buildPdfData(record) {
     const digits = String(record.id || "").replace(/[^0-9]/g, "");
     seq = digits ? digits.slice(-3) : "1";
   }
-  const quoteId = `${compSlug}-${seq}`;
+  const quoteId = record.quote_id || `${compSlug}-${seq}`;
 
   return {
     quote_id: quoteId,
