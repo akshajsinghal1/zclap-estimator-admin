@@ -53,7 +53,7 @@ module.exports = async function handler(req, res) {
     if (finalLow        !== null) updatePayload.final_low        = finalLow;
     if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
 
-    // Fetch target record first to compute and save persistent quote_id
+    // Fetch target record first to compute and save persistent per-company quote_id (e.g. ZCLAP-1, ZCLAP-2)
     const { data: existing } = await supabase
       .from("estimator_requests")
       .select("id,company,quote_id,sequence_no")
@@ -61,13 +61,25 @@ module.exports = async function handler(req, res) {
       .maybeSingle();
 
     if (existing) {
-      const compSlug = String(existing.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
-      let seq = existing.quote_seq || existing.sequence_no;
-      if (!seq) {
-        const digits = String(existing.id || "").replace(/[^0-9]/g, "");
-        seq = digits ? digits.slice(-3) : "1";
+      if (existing.quote_id) {
+        updatePayload.quote_id = existing.quote_id;
+      } else {
+        const compSlug = String(existing.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
+        
+        // Calculate per-company sequence number by counting previous quotes for this company
+        const { data: companyQuotes } = await supabase
+          .from("estimator_requests")
+          .select("id,created_at")
+          .ilike("company", existing.company || "")
+          .order("created_at", { ascending: true });
+
+        let companySeq = 1;
+        if (Array.isArray(companyQuotes) && companyQuotes.length > 0) {
+          const idx = companyQuotes.findIndex((q) => q.id === requestId);
+          companySeq = idx >= 0 ? idx + 1 : companyQuotes.length + 1;
+        }
+        updatePayload.quote_id = `${compSlug}-${companySeq}`;
       }
-      updatePayload.quote_id = existing.quote_id || `${compSlug}-${seq}`;
     }
 
     // Update the record and fetch it back with all fields needed for the PDF

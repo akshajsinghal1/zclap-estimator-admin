@@ -199,11 +199,7 @@ function buildPdfData(record) {
   const legacyHandling = legacyHandlingRaw || "Not applicable";
 
   const compSlug = String(record.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
-  let seq = record.quote_seq || record.sequence_no;
-  if (!seq) {
-    const digits = String(record.id || "").replace(/[^0-9]/g, "");
-    seq = digits ? digits.slice(-3) : "1";
-  }
+  const seq = record.quote_seq || record.sequence_no || "1";
   const quoteId = record.quote_id || `${compSlug}-${seq}`;
 
   return {
