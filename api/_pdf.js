@@ -53,27 +53,96 @@ function renderPills(values) {
 function renderFixedPriceSection(data) {
   if (data.final_low == null || data.final_high == null) return "";
 
-  const pctLabel =
-    data.contingency_pct != null
-      ? `Includes ${escapeHtml(data.contingency_pct)}% fixed-price contingency`
-      : "Fixed-price quote reviewed and approved by ZCLAP";
-
+  const pctLabel = "Fixed-price quote reviewed and approved by ZCLAP";
   const finalLow = escapeHtml(formatCurrency(data.final_low));
   const finalHigh = escapeHtml(formatCurrency(data.final_high));
 
   return `
-    <section class="section" style="border:1.5px solid #e4622a;margin-top:14px;">
-      <div class="section-header" style="background:#fff8f5;padding:10px 16px;">
+    <section class="section" style="border:1.5px solid #e4622a;margin-top:10px;">
+      <div class="section-header" style="background:#fff8f5;padding:8px 14px;">
         <div>
           <div class="section-kicker" style="color:#c9531f;">Fixed-price quote</div>
-          <h2 style="color:#17324d;font-size:14pt;">Final Quoted Price</h2>
+          <h2 style="color:#17324d;font-size:13pt;">Final Quoted Price</h2>
         </div>
         <div class="section-note">${pctLabel}</div>
       </div>
-      <div style="padding:16px;background:#ffffff;text-align:center;">
-        <div style="font-size:24pt;font-weight:800;letter-spacing:-0.02em;color:#17324d;">${finalLow} &ndash; ${finalHigh}</div>
+      <div style="padding:12px;background:#ffffff;text-align:center;">
+        <div style="font-size:22pt;font-weight:800;letter-spacing:-0.02em;color:#17324d;">${finalLow} &ndash; ${finalHigh}</div>
       </div>
     </section>`;
+}
+
+function renderScopeRows(data) {
+  const isMod = String(data.estimator_type).toLowerCase() === "modernization";
+  const ootbPills = renderPills(data.ootb_entities);
+
+  let html = `
+    <tr>
+      <td class="input-cell">Estimator type</td>
+      <td class="value-cell">${escapeHtml(data.estimator_type)}</td>
+      <td class="input-cell">Custom ent.</td>
+      <td class="value-cell">${escapeHtml(data.custom_entities)}</td>
+    </tr>
+    <tr>
+      <td class="input-cell">OOTB entities</td>
+      <td class="value-cell" colspan="3"><div class="pill-list">${ootbPills}</div></td>
+    </tr>
+    <tr>
+      <td class="input-cell">Relationships</td>
+      <td class="value-cell">${escapeHtml(data.relationships)}</td>
+      <td class="input-cell">Hierarchies</td>
+      <td class="value-cell">${escapeHtml(data.hierarchies)}</td>
+    </tr>
+    <tr>
+      <td class="input-cell">Batch sources</td>
+      <td class="value-cell">${escapeHtml(data.batch_source_systems)}</td>
+      <td class="input-cell">RT inbound</td>
+      <td class="value-cell">${escapeHtml(data.real_time_inbound)}</td>
+    </tr>
+    <tr>
+      <td class="input-cell">Batch consumers</td>
+      <td class="value-cell">${escapeHtml(data.batch_consumers)}</td>
+      <td class="input-cell">RT consumers</td>
+      <td class="value-cell">${escapeHtml(data.real_time_consumers)}</td>
+    </tr>
+    <tr>
+      <td class="input-cell">Create workflows</td>
+      <td class="value-cell">${escapeHtml(data.create_workflows)}</td>
+      <td class="input-cell">Volume</td>
+      <td class="value-cell">${escapeHtml(data.record_volume)}</td>
+    </tr>`;
+
+  if (isMod) {
+    const legacyDescMap = {
+      "Load by business ID": "Load existing golden records into MDM retaining legacy cross-reference IDs",
+      "Merge by old ID": "Load legacy records as source cross-references and run automated match/merge by legacy IDs",
+      "New match/merge": "Load raw source records into MDM and execute full initial match & merge rules across all systems",
+    };
+    const rawLegacy = data.legacy_handling_raw || data.legacy_handling;
+    const legacyText = legacyDescMap[rawLegacy] || escapeHtml(data.legacy_handling);
+
+    html += `
+    <tr>
+      <td class="input-cell">DaaS / enrichment</td>
+      <td class="value-cell">${escapeHtml(data.daas_services)}</td>
+      <td class="input-cell"><span class="only-modernization">Mod.</span> Parallel testing</td>
+      <td class="value-cell">${escapeHtml(data.parallel_testing)}</td>
+    </tr>
+    <tr>
+      <td class="input-cell" colspan="2"><span class="only-modernization">Mod.</span> How to handle legacy golden records:</td>
+      <td class="value-cell" colspan="2">${escapeHtml(legacyText)}</td>
+    </tr>`;
+  } else {
+    html += `
+    <tr>
+      <td class="input-cell">DaaS / enrichment</td>
+      <td class="value-cell">${escapeHtml(data.daas_services)}</td>
+      <td class="input-cell"></td>
+      <td class="value-cell"></td>
+    </tr>`;
+  }
+
+  return html;
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +205,7 @@ function buildPdfData(record) {
     daas_services: daas,
     parallel_testing:
       inp.parallelWeeks > 0 ? `${inp.parallelWeeks} weeks` : "Not applicable",
+    legacy_handling_raw: inp.legacyHandling || "",
     legacy_handling: inp.legacyHandling || "Not applicable",
 
     // Rolled-up totals
@@ -208,6 +278,7 @@ function renderHtml(record) {
   }
 
   // HTML-content substitutions (not escaped)
+  html = html.replaceAll("{{SCOPE_ROWS_HTML}}", renderScopeRows(data));
   html = html.replaceAll("{{OOTB_ENTITY_PILLS}}", renderPills(data.ootb_entities));
   html = html.replaceAll("{{FIXED_PRICE_SECTION}}", renderFixedPriceSection(data));
 
