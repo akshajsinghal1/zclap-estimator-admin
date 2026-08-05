@@ -87,9 +87,9 @@ async function sendEstimateEmail(record, pdfBuffer) {
     Based on what you told us, we'd deliver this as a fixed-price engagement in the range of <strong>${priceRange}</strong>, over roughly <strong>${timelineStr}</strong>, at <strong>${complexityLevel}</strong> complexity. The PDF lays out the scope and the assumptions behind the number.
   </p>
 
-  <div style="background:#f8fafc;border-left:4px solid #e4622a;padding:14px 18px;margin:20px 0;border-radius:4px;color:#334155;font-size:14.5px;line-height:1.6;">
+  <p style="font-size:15px;margin:0 0 16px;color:#374151;">
     ${complexityParagraph}
-  </div>
+  </p>
 
   <p style="font-size:15px;margin:0 0 16px;color:#374151;">
     A quick word on why that number is fixed. Most MDM work gets quoted time-and-materials, which quietly puts the risk of overruns on you. We do the opposite &mdash; we scope tightly up front and commit to a price, so the estimate you're holding is the start of the conversation, not a moving target. It's indicative for now; a short scoping call is all it takes to turn it into a firm proposal.
