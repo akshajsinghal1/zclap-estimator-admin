@@ -371,9 +371,9 @@
     }
 
     .footer-note {
-      margin-top: 12px;
+      margin-top: 10px;
       display: grid;
-      grid-template-columns: 1.2fr 0.8fr;
+      grid-template-columns: 0.3fr 0.7fr;
       gap: 12px;
     }
 
@@ -382,26 +382,36 @@
       border-radius: var(--radius-lg);
       border: 1px solid #e2e8f0;
       background: #f8fafc;
-      padding: 12px 14px;
+      padding: 10px 12px;
     }
 
-    .disclaimer h3,
+    .disclaimer h3 {
+      margin: 0 0 4px;
+      font-size: 9.5pt;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
     .contact h3 {
       margin: 0 0 4px;
       font-size: 10.5pt;
-      color: #17324d;
+      color: #c9531f;
+      letter-spacing: 0.02em;
     }
 
-    .disclaimer p,
+    .disclaimer p {
+      margin: 0;
+      color: #475569;
+      font-size: 8.5pt;
+      line-height: 1.4;
+    }
+
     .contact p {
       margin: 0;
-      color: #334155;
-      font-size: 9.5pt;
-      line-height: 1.45;
-    }
-
-    .contact strong {
       color: #0f172a;
+      font-size: 9pt;
+      line-height: 1.45;
     }
 
     @media print {
