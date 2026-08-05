@@ -53,41 +53,12 @@ module.exports = async function handler(req, res) {
     if (finalLow        !== null) updatePayload.final_low        = finalLow;
     if (finalHigh       !== null) updatePayload.final_high       = finalHigh;
 
-    // Fetch target record first to compute and save persistent per-company quote_id (e.g. ZCLAP-1, ZCLAP-2)
-    const { data: existing } = await supabase
-      .from("estimator_requests")
-      .select("id,company,quote_id,sequence_no")
-      .eq("id", requestId)
-      .maybeSingle();
-
-    if (existing) {
-      if (existing.quote_id) {
-        updatePayload.quote_id = existing.quote_id;
-      } else {
-        const compSlug = String(existing.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
-        
-        // Calculate per-company sequence number by counting previous quotes for this company
-        const { data: companyQuotes } = await supabase
-          .from("estimator_requests")
-          .select("id,created_at")
-          .ilike("company", existing.company || "")
-          .order("created_at", { ascending: true });
-
-        let companySeq = 1;
-        if (Array.isArray(companyQuotes) && companyQuotes.length > 0) {
-          const idx = companyQuotes.findIndex((q) => q.id === requestId);
-          companySeq = idx >= 0 ? idx + 1 : companyQuotes.length + 1;
-        }
-        updatePayload.quote_id = `${compSlug}-${companySeq}`;
-      }
-    }
-
     // Update the record and fetch it back with all fields needed for the PDF
     const { data: approved, error: updateError } = await supabase
       .from("estimator_requests")
       .update(updatePayload)
       .eq("id", requestId)
-      .select("id,status,approved_by,approved_at,estimator_type,first_name,last_name,email,company,role,inputs,outputs,reviewed_inputs,reviewed_outputs,contingency_pct,final_low,final_high,quote_id")
+      .select("id,status,approved_by,approved_at,estimator_type,first_name,last_name,email,company,role,inputs,outputs,reviewed_inputs,reviewed_outputs,contingency_pct,final_low,final_high")
       .maybeSingle();
 
     if (updateError) {
@@ -100,6 +71,15 @@ module.exports = async function handler(req, res) {
       res.status(404).json({ error: "Pending request not found" });
       return;
     }
+
+    // Compute quote_id in-memory for PDF and Email generation
+    const compSlug = String(approved.company || "ZCLAP").toUpperCase().replace(/[^A-Z0-9]/g, "").slice(0, 6) || "ZCLAP";
+    let seq = approved.quote_seq || approved.sequence_no;
+    if (!seq) {
+      const digits = String(approved.id || "").replace(/[^0-9]/g, "");
+      seq = digits ? digits.slice(-3) : "1";
+    }
+    approved.quote_id = approved.quote_id || `${compSlug}-${seq}`;
 
     // --- Generate PDF + send email (awaited so Vercel serverless function stays active until sent) ---
     let emailStatus = "not_sent";
