@@ -27,12 +27,12 @@ function createTransport() {
 function getComplexityParagraph(risk) {
   const r = String(risk || "medium").toLowerCase();
   if (r === "low") {
-    return "I assessed your project as low complexity, which means this estimate is going to be close to spot on given the scope you’ve shared. Based on more than 20 years doing MDM and dozens of MDM projects, my experience says projects like yours tend to go smoothly with a minimum of surprises.";
+    return "I assessed your project as low complexity, which means this estimate is going to be close to spot on given the scope you've shared. Based on more than 20 years doing MDM and dozens of MDM projects, my experience says projects like yours tend to go smoothly with a minimum of surprises.";
   }
   if (r === "high") {
-    return "I assessed your project as high complexity. But don’t we worried – complex does not mean risky! Highly complex MDM projects are often complex because they are delivering the greatest value. I’ve been doing MDM for more than 20 years with literally dozens of super complex implementations for some of the largest companies n the world. We mitigate complexity by working together to document a solid understanding of your requirements and business outcomes to make sure we get the scope right, and the collaborate hand-in-hand during the implementation to address the inevitable questions that come up.";
+    return "I assessed your project as high complexity. But don't be worried – complex does not mean risky! Highly complex MDM projects are often complex because they are delivering the greatest value. I've been doing MDM for more than 20 years with literally dozens of super complex implementations for some of the largest companies in the world. We mitigate complexity by working together to document a solid understanding of your requirements and business outcomes to make sure we get the scope right, and collaborate hand-in-hand during the implementation to address the inevitable questions that come up.";
   }
-  return "I assessed your project as medium complexity. These means our estimate is a solid starting point but we should schedule a call to discuss any unique requirements of your project. Based on more than 20 years doing MDM and dozens of MDM projects, medium complexity does not mean risky; what is does mean is it is important to have a solid understanding of your requirements and business outcomes to make sure we get the scope right.";
+  return "I assessed your project as medium complexity. This means our estimate is a solid starting point but we should schedule a call to discuss any unique requirements of your project. Based on more than 20 years doing MDM and dozens of MDM projects, medium complexity does not mean risky; it does mean it is important to have a solid understanding of your requirements and business outcomes to make sure we get the scope right.";
 }
 
 async function sendEstimateEmail(record, pdfBuffer) {
