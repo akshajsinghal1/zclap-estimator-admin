@@ -370,12 +370,10 @@
       const layoutAndWorkflowHrs = (totalEnt * 1 * 6) + (totalEnt * 2 * 6) + (createWkfl * 10);
 
       // Excel Hour Totals sub-totals (mirrors spreadsheet structure)
-      // SaaS: DaaS included in CDI sub-total; Migration: DaaS excluded from CDI dev-count sub-total
       const cdiBaseHrs = entInHrs + relInHrs + hierInHrs + entOutHrs + relOutHrs + hierOutHrs + rtInHrs + rtOutHrs;
       const buildCDI   = cdiBaseHrs + circlebacks + searchBeforeCreate + (isModernization ? 0 : daasHrs);
       const buildMDM   = custBuild + ootbAdjust + matchHrs + layoutAndWorkflowHrs;
       const buildDQ    = profHrs + dqFuncHrs;
-      // SaaS: daasHrs already inside buildCDI. Migration: DaaS excluded from buildHrs entirely (Excel model).
       const buildHrs   = buildCDI + buildMDM + buildDQ;
 
       // Developer counts — Excel's stepped IF formulas
@@ -383,7 +381,7 @@
       const cdiDevs = cdiWks > 80 ? 8 : cdiWks > 60 ? 7 : cdiWks > 40 ? 5 : cdiWks > 15 ? 4 : cdiWks > 9 ? 3 : cdiWks > 2 ? 2 : 1;
       const mdmDevs = totalEnt > 4 ? 3 : totalEnt > 2 ? 2 : 1;
 
-      // Build duration = max of CDI and MDM parallel tracks (Excel E54: CEILING(MAX(E50,H50),1))
+      // Build duration = max of CDI and MDM parallel tracks
       const buildWks = Math.ceil(Math.max(cdiWks / cdiDevs, (buildMDM / 40) / mdmDevs));
 
       // Phase durations — exact Excel formulas
@@ -392,28 +390,27 @@
       const integWks  = Math.max(isModernization ? 3 : 2, Math.round(0.35 * designWks));
       const uatWks    = Math.max(2, Math.min(isModernization ? 6 : 5, Math.round(buildHrs * 0.05 / 40)));
       const parallelWks = isModernization ? Math.max(2, Number(inp.parallelWeeks || 2)) : 0;
+      const cutoverWks  = 1;
 
-      // Schedule overlaps (Excel Schedule sheet IF formulas)
+      // Schedule overlaps
       const buildDesignOverlap = (buildWks > 4 && designWks > 2) ? 1 : 0;
       const integBuildOverlap  = integWks > 3 ? (buildWks > 6 ? 2 : buildWks > 4 ? 1 : 0) : 0;
 
-      // Total weeks — training (2wk) and cutover (1wk) net to zero via their own overlaps
-      const totalWks = 1 + reqWks + designWks + buildWks + integWks + uatWks + parallelWks
-                       - buildDesignOverlap - integBuildOverlap;
+      // Total weeks
+      const totalWks = Math.max(1, reqWks + designWks + buildWks + integWks + uatWks + parallelWks + cutoverWks - buildDesignOverlap - integBuildOverlap);
 
-      // Per-role cost — exact Excel Schedule sheet formula (T&M, before uplift)
+      // Per-role cost
       const intgArchHrsPW = bIn > 4 ? 15 : bIn > 2 ? 10 : 0;
       const rawCost = totalWks * (
-          15 * 180              // Project Manager: 15 hrs/wk × $180
-        + 20 * 195              // MDM Advisor: 20 hrs/wk × $195
-        + 25 * 120              // Solution Architect: 25 hrs/wk × $120
-        + 10 * 60               // CDQ: 10 hrs/wk × $60
-        + 20 * mdmDevs * 60     // MDM developers: 20 hrs/wk × count × $60
-        + intgArchHrsPW * 120   // Integration Architect (conditional on batch sources) × $120
-        + cdiDevs * 28 * 60     // CDI/CAI developers: 28 hrs/wk × count × $60
+          15 * 180
+        + 20 * 195
+        + 25 * 120
+        + 10 * 60
+        + 20 * mdmDevs * 60
+        + intgArchHrsPW * 120
+        + cdiDevs * 28 * 60
       );
 
-      // Fixed-price uplift ×1.2 (Excel x_Fixed_Fee_Uplift = 1.2); low = fixed price, high = +8.3% buffer
       const low  = roundToStep(rawCost * 1.20, 5000);
       const high = roundToStep(rawCost * 1.30, 5000);
 
@@ -427,18 +424,91 @@
       if (isModernization && migrationOption !== 3) rs += 1;
       const risk = rs <= 2 ? 'Low' : rs <= 5 ? 'Medium' : 'High';
 
-      return { low, high, totalWks, risk,
-        lowFmt: '$' + Math.round(low).toLocaleString('en-US'), highFmt: '$' + Math.round(high).toLocaleString('en-US') };
+      return {
+        low, high, totalWks, risk,
+        reqWks, designWks, buildWks, integWks, uatWks, parallelWks, cutoverWks,
+        buildDesignOverlap, integBuildOverlap, mdmDevs, intgArchHrsPW, cdiDevs, rawCost,
+        lowFmt: '$' + Math.round(low).toLocaleString('en-US'),
+        highFmt: '$' + Math.round(high).toLocaleString('en-US')
+      };
+    }
+
+    function calcFromScheduleAndRoles(sched, roles, contingencyPct, baseRisk) {
+      const req = Number(sched.reqWks || 0);
+      const des = Number(sched.designWks || 0);
+      const bld = Number(sched.buildWks || 0);
+      const itg = Number(sched.integWks || 0);
+      const uat = Number(sched.uatWks || 0);
+      const par = Number(sched.parallelWks || 0);
+      const cut = Number(sched.cutoverWks || 1);
+
+      const ovBuildDes = Number(sched.buildDesignOverlap || 0);
+      const ovItgBld = Number(sched.integBuildOverlap || 0);
+
+      const netWks = Math.max(1, (req + des + bld + itg + uat + par + cut) - (ovBuildDes + ovItgBld));
+
+      // Role Weekly Rates & Hours
+      const pmCost    = netWks * Number(roles.pmHrs || 0) * 180;
+      const advCost   = netWks * Number(roles.advisorHrs || 0) * 195;
+      const saCost    = netWks * Number(roles.saHrs || 0) * 120;
+      const cdqCost   = netWks * Number(roles.cdqHrs || 0) * 60;
+      const mdmCost   = netWks * Number(roles.mdmDevs || 0) * 20 * 60;
+      const intgCost  = netWks * Number(roles.intgArchHrs || 0) * 120;
+      const cdiCost   = netWks * Number(roles.cdiDevs || 0) * 28 * 60;
+
+      const rawCost = pmCost + advCost + saCost + cdqCost + mdmCost + intgCost + cdiCost;
+
+      const pct = Number(contingencyPct || 0);
+      const low  = roundToStep(rawCost * (1 + pct / 100), 5000);
+      const high = roundToStep(rawCost * (1 + pct / 100 + 0.083), 5000);
+
+      return {
+        netWks,
+        rawCost,
+        low,
+        high,
+        lowFmt: '$' + Math.round(low).toLocaleString('en-US'),
+        highFmt: '$' + Math.round(high).toLocaleString('en-US'),
+        risk: baseRisk || 'Medium',
+      };
     }
 
     // ── Review state ──────────────────────────────────────────────
-    let rv = { item: null, inp: {}, type: '', contingency: 20 };
+    let rv = { item: null, inp: {}, type: '', contingency: 20, schedule: {}, roles: {} };
 
     function openReview(item) {
       rv.item = item;
       rv.type = item.estimatorType || item.estimator_type || 'implementation';
       rv.inp = JSON.parse(JSON.stringify(item.inputs || {}));
-      rv.contingency = 20;
+      
+      const baseCalc = calcFromInputs(rv.inp, rv.type);
+      const prevRevOut = item.reviewed_outputs || {};
+      const prevSched = prevRevOut.schedule || {};
+      const prevRoles = prevRevOut.roles || {};
+
+      rv.schedule = {
+        reqWks: prevSched.reqWks ?? baseCalc.reqWks,
+        designWks: prevSched.designWks ?? baseCalc.designWks,
+        buildWks: prevSched.buildWks ?? baseCalc.buildWks,
+        integWks: prevSched.integWks ?? baseCalc.integWks,
+        uatWks: prevSched.uatWks ?? baseCalc.uatWks,
+        parallelWks: prevSched.parallelWks ?? baseCalc.parallelWks,
+        cutoverWks: prevSched.cutoverWks ?? baseCalc.cutoverWks,
+        buildDesignOverlap: prevSched.buildDesignOverlap ?? baseCalc.buildDesignOverlap,
+        integBuildOverlap: prevSched.integBuildOverlap ?? baseCalc.integBuildOverlap,
+      };
+
+      rv.roles = {
+        pmHrs: prevRoles.pmHrs ?? 15,
+        advisorHrs: prevRoles.advisorHrs ?? 20,
+        saHrs: prevRoles.saHrs ?? 25,
+        cdqHrs: prevRoles.cdqHrs ?? 10,
+        mdmDevs: prevRoles.mdmDevs ?? baseCalc.mdmDevs,
+        intgArchHrs: prevRoles.intgArchHrs ?? baseCalc.intgArchHrsPW,
+        cdiDevs: prevRoles.cdiDevs ?? baseCalc.cdiDevs,
+      };
+
+      rv.contingency = item.contingency_pct != null ? item.contingency_pct : 20;
 
       const user = item.user || {};
       const fn = item.firstName || item.first_name || user.firstName || '';
@@ -456,107 +526,122 @@
     function closeReview() {
       document.getElementById('review-overlay').classList.add('hidden');
       document.body.style.overflow = '';
-      rv = { item: null, inp: {}, type: '', contingency: 20 };
+      rv = { item: null, inp: {}, type: '', contingency: 20, schedule: {}, roles: {} };
     }
 
     function handleOverlayClick(e) {
       if (e.target === document.getElementById('review-overlay')) closeReview();
     }
 
-    const OOTB_OPTIONS = ['Organization','Person','Supplier','Contact','Item','Category'];
-
     function renderReviewInputs() {
       const isMod = rv.type === 'modernization';
       const inp = rv.inp;
+      const sch = rv.schedule;
+      const rls = rv.roles;
+
+      const ootbPills = (inp.ootb && inp.ootb.length)
+        ? inp.ootb.map(o => `<span class="pill" style="display:inline-block;padding:2px 8px;background:#e2e8f0;border-radius:12px;font-size:8.5pt;margin:2px;">${o}</span>`).join('')
+        : '<span style="color:#64748b;font-size:8.5pt;">None selected</span>';
 
       let h = '';
 
-      if (isMod) {
-        h += `<div class="rv-section">
-          <div class="rv-label">Modernization</div>
-          <div class="rv-row"><label>Parallel testing weeks</label><input type="number" id="rv-parallelWeeks" min="2" max="16" value="${inp.parallelWeeks||2}" oninput="rvSet('parallelWeeks',+this.value)"></div>
-          <div class="rv-row"><label>Legacy record handling</label>
-            <select id="rv-legacyHandling" onchange="rvSet('legacyHandling',this.value)">
-              <option ${inp.legacyHandling==='Load by business ID'?'selected':''}>Load by business ID</option>
-              <option ${inp.legacyHandling==='Merge by old ID'?'selected':''}>Merge by old ID</option>
-              <option ${(!inp.legacyHandling||inp.legacyHandling==='New match/merge')?'selected':''}>New match/merge</option>
-            </select>
+      // READ-ONLY CLIENT SCOPE DISPLAY
+      h += `
+        <div class="rv-section" style="background:#f8fafc;border:1px solid #cbd5e1;padding:12px 14px;border-radius:8px;margin-bottom:14px;">
+          <div class="rv-label" style="color:#c9531f;font-weight:700;font-size:9pt;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px;">
+            🔒 Submitted Client Scope (Read-Only)
           </div>
-        </div>`;
-      }
 
-      h += `<div class="rv-section">
-        <div class="rv-label">OOTB Entities</div>
-        <div class="rv-checkboxes">
-          ${OOTB_OPTIONS.map(o => `<label class="rv-check"><input type="checkbox" value="${o}" ${(inp.ootb||[]).includes(o)?'checked':''} onchange="rvToggleOotb('${o}',this.checked)"> ${o}</label>`).join('')}
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:9pt;color:#334155;line-height:1.4;">
+            <div><strong>Estimator Type:</strong> ${rv.type.toUpperCase()}</div>
+            <div><strong>Record Volume:</strong> ${inp.volume || 'Not specified'}</div>
+            <div style="grid-column:span 2;"><strong>OOTB Entities:</strong> ${ootbPills}</div>
+            <div><strong>Custom Entities:</strong> ${inp.customEnt || 0}</div>
+            <div><strong>Relationships / Hierarchies:</strong> ${inp.rels || 0} / ${inp.hierarchies || 0}</div>
+            <div><strong>Batch Sources / RT Inbound:</strong> ${inp.sources || 0} / ${inp.rtSources || 0}</div>
+            <div><strong>Batch Targets / RT Targets:</strong> ${inp.consumers || 0} / ${inp.rtConsumers || 0}</div>
+            <div><strong>Create Workflows:</strong> ${inp.createWkfl || 0}</div>
+            <div><strong>DaaS Services:</strong> ${inp.daas || 0}</div>
+            ${isMod ? `<div style="grid-column:span 2;"><strong>Modernization Legacy Handling:</strong> ${inp.legacyHandling || 'New match/merge'} (${inp.parallelWeeks || 2} wks parallel)</div>` : ''}
+          </div>
         </div>
-      </div>`;
+      `;
 
-      const numRow = (id, label, min, max, val) =>
-        `<div class="rv-row"><label>${label}</label><input type="number" id="rv-${id}" min="${min}" max="${max}" value="${val??0}" oninput="rvSet('${id}',+this.value)"></div>`;
+      // INTERACTIVE SCHEDULE PHASE & OVERLAP ADJUSTER (Excel C4:C11, D4:D11)
+      h += `
+        <div class="rv-section" style="border:1.5px solid #17324d;padding:12px 14px;border-radius:8px;margin-bottom:14px;background:#ffffff;">
+          <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin-bottom:10px;">
+            📅 Schedule Phase &amp; Overlap Adjuster (Weeks)
+          </div>
 
-      h += `<div class="rv-section">
-        <div class="rv-label">Entities</div>
-        ${numRow('customEnt','Custom entities',0,20,inp.customEnt)}
-      </div>`;
-
-      h += `<div class="rv-section">
-        <div class="rv-label">Relationships &amp; Hierarchies</div>
-        ${numRow('rels','Relationships',0,30,inp.rels)}
-        ${numRow('hierarchies','Hierarchies',0,20,inp.hierarchies)}
-      </div>`;
-
-      h += `<div class="rv-section">
-        <div class="rv-label">Source &amp; Consuming Systems</div>
-        ${numRow('sources','Batch source systems',0,30,inp.sources)}
-        ${numRow('rtSources','Real-time inbound sources',0,20,inp.rtSources)}
-        ${numRow('consumers','Batch consumers',0,30,inp.consumers)}
-        ${numRow('rtConsumers','Real-time consumers',0,20,inp.rtConsumers)}
-      </div>`;
-
-      h += `<div class="rv-section">
-        <div class="rv-label">Workflows &amp; Volume</div>
-        ${numRow('createWkfl','Entities with create workflows',0,20,inp.createWkfl)}
-        <div class="rv-row"><label>Source record volume</label>
-          <select onchange="rvSet('volume',this.value)">
-            ${['Less than 1 million','1 million to 10 million','10 million to 80 million','Over 80 million'].map(v=>`<option ${inp.volume===v?'selected':''}>${v}</option>`).join('')}
-          </select>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div class="rv-row"><label>Requirements Phase (wks)</label><input type="number" id="sch-reqWks" min="1" max="12" value="${sch.reqWks}" oninput="rvSchedSet('reqWks',+this.value)"></div>
+            <div class="rv-row"><label>Design Phase (wks)</label><input type="number" id="sch-designWks" min="1" max="12" value="${sch.designWks}" oninput="rvSchedSet('designWks',+this.value)"></div>
+            <div class="rv-row"><label>Build &amp; Unit Test (wks)</label><input type="number" id="sch-buildWks" min="1" max="30" value="${sch.buildWks}" oninput="rvSchedSet('buildWks',+this.value)"></div>
+            <div class="rv-row"><label>Integration Test (wks)</label><input type="number" id="sch-integWks" min="1" max="12" value="${sch.integWks}" oninput="rvSchedSet('integWks',+this.value)"></div>
+            <div class="rv-row"><label>UAT Testing (wks)</label><input type="number" id="sch-uatWks" min="1" max="12" value="${sch.uatWks}" oninput="rvSchedSet('uatWks',+this.value)"></div>
+            ${isMod ? `<div class="rv-row"><label>Parallel Testing (wks)</label><input type="number" id="sch-parallelWks" min="0" max="16" value="${sch.parallelWks}" oninput="rvSchedSet('parallelWks',+this.value)"></div>` : ''}
+            <div class="rv-row"><label>Cutover / Training (wks)</label><input type="number" id="sch-cutoverWks" min="1" max="6" value="${sch.cutoverWks}" oninput="rvSchedSet('cutoverWks',+this.value)"></div>
+            <div class="rv-row"><label>Build/Design Overlap (wks)</label><input type="number" id="sch-buildDesignOverlap" min="0" max="4" value="${sch.buildDesignOverlap}" oninput="rvSchedSet('buildDesignOverlap',+this.value)"></div>
+            <div class="rv-row"><label>Integ/Build Overlap (wks)</label><input type="number" id="sch-integBuildOverlap" min="0" max="4" value="${sch.integBuildOverlap}" oninput="rvSchedSet('integBuildOverlap',+this.value)"></div>
+          </div>
         </div>
-      </div>`;
+      `;
 
-      h += `<div class="rv-section">
-        <div class="rv-label">Data Cleansing / Enrichment</div>
-        ${numRow('daas','DaaS / enrichment services',0,10,inp.daas)}
-      </div>`;
+      // INTERACTIVE ROLE ALLOCATION & RATE MATRIX (Excel AL14:AO26)
+      h += `
+        <div class="rv-section" style="border:1.5px solid #17324d;padding:12px 14px;border-radius:8px;background:#ffffff;">
+          <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin-bottom:10px;">
+            👥 Role Allocations &amp; Resource Rates
+          </div>
+
+          <table style="width:100%;font-size:8.5pt;border-collapse:collapse;" class="rv-role-table">
+            <thead>
+              <tr style="background:#f1f5f9;text-align:left;border-bottom:1px solid #cbd5e1;">
+                <th style="padding:4px 6px;">Role Name</th>
+                <th style="padding:4px 6px;">Weekly Hrs / Dev Count</th>
+                <th style="padding:4px 6px;">Rate ($/hr)</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td style="padding:4px 6px;">Project Manager</td><td><input type="number" min="0" max="40" value="${rls.pmHrs}" oninput="rvRoleSet('pmHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$180</td></tr>
+              <tr><td style="padding:4px 6px;">MDM Advisor</td><td><input type="number" min="0" max="40" value="${rls.advisorHrs}" oninput="rvRoleSet('advisorHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$195</td></tr>
+              <tr><td style="padding:4px 6px;">Solution Architect</td><td><input type="number" min="0" max="40" value="${rls.saHrs}" oninput="rvRoleSet('saHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$120</td></tr>
+              <tr><td style="padding:4px 6px;">CDQ Specialist</td><td><input type="number" min="0" max="40" value="${rls.cdqHrs}" oninput="rvRoleSet('cdqHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$60</td></tr>
+              <tr><td style="padding:4px 6px;">MDM Developers</td><td><input type="number" min="1" max="8" value="${rls.mdmDevs}" oninput="rvRoleSet('mdmDevs',+this.value)" style="width:55px;"> dev(s)</td><td>$60 (20h/ea)</td></tr>
+              <tr><td style="padding:4px 6px;">Integration Architect</td><td><input type="number" min="0" max="40" value="${rls.intgArchHrs}" oninput="rvRoleSet('intgArchHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$120</td></tr>
+              <tr><td style="padding:4px 6px;">CDI / CAI Developers</td><td><input type="number" min="1" max="8" value="${rls.cdiDevs}" oninput="rvRoleSet('cdiDevs',+this.value)" style="width:55px;"> dev(s)</td><td>$60 (28h/ea)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      `;
 
       document.getElementById('rv-inputs').innerHTML = h;
     }
 
-    function rvSet(key, val) {
-      rv.inp[key] = val;
+    function rvSchedSet(key, val) {
+      rv.schedule[key] = val;
       updateReviewResult();
     }
 
-    function rvToggleOotb(name, checked) {
-      rv.inp.ootb = rv.inp.ootb || [];
-      if (checked) { if (!rv.inp.ootb.includes(name)) rv.inp.ootb.push(name); }
-      else { rv.inp.ootb = rv.inp.ootb.filter(o => o !== name); }
+    function rvRoleSet(key, val) {
+      rv.roles[key] = val;
       updateReviewResult();
     }
 
     function updateReviewResult() {
-      const r = calcFromInputs(rv.inp, rv.type);
+      const baseCalc = calcFromInputs(rv.inp, rv.type);
       const pct = Number(document.getElementById('rv-contingency')?.value ?? rv.contingency) || 0;
       rv.contingency = pct;
-      const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
-      const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
+
+      const res = calcFromScheduleAndRoles(rv.schedule, rv.roles, pct, baseCalc.risk);
       const fmtK = n => '$' + Math.round(n).toLocaleString('en-US');
 
       document.getElementById('rv-result').innerHTML = `
         <div class="res-block">
-          <div class="res-eyebrow">T&amp;M Base</div>
-          <div class="res-value">${r.lowFmt} – ${r.highFmt}</div>
-          <div class="res-sub">${r.totalWks} wks · ${r.risk} complexity</div>
+          <div class="res-eyebrow">Adjusted T&amp;M Base</div>
+          <div class="res-value">${fmtK(res.rawCost)}</div>
+          <div class="res-sub">${res.netWks} net wks · ${res.risk} complexity</div>
         </div>
         <hr class="res-divider">
         <div class="res-block">
@@ -569,8 +654,8 @@
         <hr class="res-divider">
         <div class="res-final">
           <div class="res-eyebrow">Final Quoted Price</div>
-          <div class="res-value">${fmtK(finalLow)} – ${fmtK(finalHigh)}</div>
-          <div class="res-sub">${r.totalWks} wks estimated</div>
+          <div class="res-value">${fmtK(res.low)} – ${fmtK(res.high)}</div>
+          <div class="res-sub">${res.netWks} wks estimated</div>
         </div>`;
     }
 
@@ -578,16 +663,17 @@
       if (!rv.item) return;
       const targetItem = rv.item;
 
-      const r = calcFromInputs(rv.inp, rv.type);
+      const baseCalc = calcFromInputs(rv.inp, rv.type);
       const pct = rv.contingency || 0;
-      const finalLow  = Math.round(r.low  * (1 + pct / 100) / 5000) * 5000;
-      const finalHigh = Math.round(r.high * (1 + pct / 100) / 5000) * 5000;
+      const res = calcFromScheduleAndRoles(rv.schedule, rv.roles, pct, baseCalc.risk);
+      const finalLow  = res.low;
+      const finalHigh = res.high;
 
       // Update local item status immediately
       targetItem.status = "done";
       targetItem.approvedBy = "Admin";
       targetItem.approvedAt = new Date().toISOString();
-      targetItem.estimateText = `$${finalLow.toLocaleString('en-US')} - $${finalHigh.toLocaleString('en-US')} | ${r.totalWks} weeks | ${r.risk} complexity`;
+      targetItem.estimateText = `$${finalLow.toLocaleString('en-US')} - $${finalHigh.toLocaleString('en-US')} | ${res.netWks} weeks | ${res.risk} complexity`;
 
       // Move item from pending to done list locally
       data.pending = (data.pending || []).filter(item => item.id !== targetItem.id);
@@ -598,17 +684,23 @@
       bindReviewButtons();
       bindPdfButtons();
 
-      // Close review window IMMEDIATELY
       closeReview();
 
-      // Fire background approval API request
       fetch('/api/admin/approve', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           requestId:       targetItem.id,
           reviewedInputs:  rv.inp,
-          reviewedOutputs: { ...r },
+          reviewedOutputs: {
+            ...baseCalc,
+            low: finalLow,
+            high: finalHigh,
+            totalWks: res.netWks,
+            risk: res.risk,
+            schedule: rv.schedule,
+            roles: rv.roles,
+          },
           contingencyPct:  pct,
           finalLow,
           finalHigh,
