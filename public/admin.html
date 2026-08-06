@@ -442,11 +442,16 @@
       const par = Number(sched.parallelWks || 0);
       const cut = Number(sched.cutoverWks || 1);
 
+      const ovReq = Number(sched.reqOverlap || 0);
+      const ovDes = Number(sched.designOverlap || 0);
       const ovBuildDes = Number(sched.buildDesignOverlap || 0);
       const ovItgBld = Number(sched.integBuildOverlap || 0);
+      const ovUat = Number(sched.uatOverlap || 0);
+      const ovPar = Number(sched.parallelOverlap || 0);
+      const ovCut = Number(sched.cutoverOverlap || 0);
 
       const totalPhaseWks = req + des + bld + itg + uat + par + cut;
-      const totalOverlaps = ovBuildDes + ovItgBld;
+      const totalOverlaps = ovReq + ovDes + ovBuildDes + ovItgBld + ovUat + ovPar + ovCut;
       const netWks = Math.max(1, totalPhaseWks - totalOverlaps);
 
       // Role Weekly Rates & Hours
@@ -493,14 +498,19 @@
 
       rv.schedule = {
         reqWks: prevSched.reqWks ?? baseCalc.reqWks,
+        reqOverlap: prevSched.reqOverlap ?? 0,
         designWks: prevSched.designWks ?? baseCalc.designWks,
+        designOverlap: prevSched.designOverlap ?? 0,
         buildWks: prevSched.buildWks ?? baseCalc.buildWks,
-        integWks: prevSched.integWks ?? baseCalc.integWks,
-        uatWks: prevSched.uatWks ?? baseCalc.uatWks,
-        parallelWks: prevSched.parallelWks ?? baseCalc.parallelWks,
-        cutoverWks: prevSched.cutoverWks ?? baseCalc.cutoverWks,
         buildDesignOverlap: prevSched.buildDesignOverlap ?? baseCalc.buildDesignOverlap,
+        integWks: prevSched.integWks ?? baseCalc.integWks,
         integBuildOverlap: prevSched.integBuildOverlap ?? baseCalc.integBuildOverlap,
+        uatWks: prevSched.uatWks ?? baseCalc.uatWks,
+        uatOverlap: prevSched.uatOverlap ?? 0,
+        parallelWks: prevSched.parallelWks ?? baseCalc.parallelWks,
+        parallelOverlap: prevSched.parallelOverlap ?? 0,
+        cutoverWks: prevSched.cutoverWks ?? baseCalc.cutoverWks,
+        cutoverOverlap: prevSched.cutoverOverlap ?? 0,
       };
 
       rv.roles = {
@@ -549,14 +559,19 @@
       const baseCalc = calcFromInputs(rv.inp, rv.type);
       rv.schedule = {
         reqWks: baseCalc.reqWks,
+        reqOverlap: 0,
         designWks: baseCalc.designWks,
+        designOverlap: 0,
         buildWks: baseCalc.buildWks,
-        integWks: baseCalc.integWks,
-        uatWks: baseCalc.uatWks,
-        parallelWks: baseCalc.parallelWks,
-        cutoverWks: baseCalc.cutoverWks,
         buildDesignOverlap: baseCalc.buildDesignOverlap,
+        integWks: baseCalc.integWks,
         integBuildOverlap: baseCalc.integBuildOverlap,
+        uatWks: baseCalc.uatWks,
+        uatOverlap: 0,
+        parallelWks: baseCalc.parallelWks,
+        parallelOverlap: 0,
+        cutoverWks: baseCalc.cutoverWks,
+        cutoverOverlap: 0,
       };
       renderReviewInputs();
       updateReviewResult();
@@ -647,14 +662,14 @@
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">Discovery / Requirements</td>
                 <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.reqWks}" oninput="rvSchedSet('reqWks',+this.value)" style="width:50px;text-align:center;"></td>
-                <td style="text-align:center;color:#94a3b8;">—</td>
-                <td style="text-align:center;font-weight:600;">${sch.reqWks}</td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.reqOverlap || 0}" oninput="rvSchedSet('reqOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.reqWks - (sch.reqOverlap || 0))}</td>
               </tr>
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">Architecture &amp; Design</td>
                 <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.designWks}" oninput="rvSchedSet('designWks',+this.value)" style="width:50px;text-align:center;"></td>
-                <td style="text-align:center;color:#94a3b8;">—</td>
-                <td style="text-align:center;font-weight:600;">${sch.designWks}</td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.designOverlap || 0}" oninput="rvSchedSet('designOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.designWks - (sch.designOverlap || 0))}</td>
               </tr>
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">Build &amp; Unit Test</td>
@@ -671,21 +686,21 @@
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">UAT Testing</td>
                 <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.uatWks}" oninput="rvSchedSet('uatWks',+this.value)" style="width:50px;text-align:center;"></td>
-                <td style="text-align:center;color:#94a3b8;">—</td>
-                <td style="text-align:center;font-weight:600;">${sch.uatWks}</td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.uatOverlap || 0}" oninput="rvSchedSet('uatOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.uatWks - (sch.uatOverlap || 0))}</td>
               </tr>
               ${isMod ? `
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">Parallel Testing</td>
                 <td style="text-align:center;"><input type="number" min="0" max="16" value="${sch.parallelWks}" oninput="rvSchedSet('parallelWks',+this.value)" style="width:50px;text-align:center;"></td>
-                <td style="text-align:center;color:#94a3b8;">—</td>
-                <td style="text-align:center;font-weight:600;">${sch.parallelWks}</td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.parallelOverlap || 0}" oninput="rvSchedSet('parallelOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.parallelWks - (sch.parallelOverlap || 0))}</td>
               </tr>` : ''}
               <tr>
                 <td style="padding:5px 6px;font-weight:500;">Cutover &amp; Training</td>
                 <td style="text-align:center;"><input type="number" min="1" max="6" value="${sch.cutoverWks}" oninput="rvSchedSet('cutoverWks',+this.value)" style="width:50px;text-align:center;"></td>
-                <td style="text-align:center;color:#94a3b8;">—</td>
-                <td style="text-align:center;font-weight:600;">${sch.cutoverWks}</td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.cutoverOverlap || 0}" oninput="rvSchedSet('cutoverOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.cutoverWks - (sch.cutoverOverlap || 0))}</td>
               </tr>
             </tbody>
             <tfoot>
