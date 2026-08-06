@@ -445,16 +445,18 @@
       const ovBuildDes = Number(sched.buildDesignOverlap || 0);
       const ovItgBld = Number(sched.integBuildOverlap || 0);
 
-      const netWks = Math.max(1, (req + des + bld + itg + uat + par + cut) - (ovBuildDes + ovItgBld));
+      const totalPhaseWks = req + des + bld + itg + uat + par + cut;
+      const totalOverlaps = ovBuildDes + ovItgBld;
+      const netWks = Math.max(1, totalPhaseWks - totalOverlaps);
 
       // Role Weekly Rates & Hours
-      const pmCost    = netWks * Number(roles.pmHrs || 0) * 180;
-      const advCost   = netWks * Number(roles.advisorHrs || 0) * 195;
-      const saCost    = netWks * Number(roles.saHrs || 0) * 120;
-      const cdqCost   = netWks * Number(roles.cdqHrs || 0) * 60;
-      const mdmCost   = netWks * Number(roles.mdmDevs || 0) * 20 * 60;
-      const intgCost  = netWks * Number(roles.intgArchHrs || 0) * 120;
-      const cdiCost   = netWks * Number(roles.cdiDevs || 0) * 28 * 60;
+      const pmCost    = netWks * Number(roles.pmHrs || 0) * Number(roles.pmRate || 180);
+      const advCost   = netWks * Number(roles.advisorHrs || 0) * Number(roles.advisorRate || 195);
+      const saCost    = netWks * Number(roles.saHrs || 0) * Number(roles.saRate || 120);
+      const cdqCost   = netWks * Number(roles.cdqHrs || 0) * Number(roles.cdqRate || 60);
+      const mdmCost   = netWks * Number(roles.mdmDevs || 0) * 20 * Number(roles.mdmDevRate || 60);
+      const intgCost  = netWks * Number(roles.intgArchHrs || 0) * Number(roles.intgArchRate || 120);
+      const cdiCost   = netWks * Number(roles.cdiDevs || 0) * 28 * Number(roles.cdiDevRate || 60);
 
       const rawCost = pmCost + advCost + saCost + cdqCost + mdmCost + intgCost + cdiCost;
 
@@ -463,6 +465,8 @@
       const high = roundToStep(rawCost * (1 + pct / 100 + 0.083), 5000);
 
       return {
+        totalPhaseWks,
+        totalOverlaps,
         netWks,
         rawCost,
         low,
@@ -470,6 +474,7 @@
         lowFmt: '$' + Math.round(low).toLocaleString('en-US'),
         highFmt: '$' + Math.round(high).toLocaleString('en-US'),
         risk: baseRisk || 'Medium',
+        costs: { pmCost, advCost, saCost, cdqCost, mdmCost, intgCost, cdiCost, rawCost }
       };
     }
 
@@ -500,12 +505,19 @@
 
       rv.roles = {
         pmHrs: prevRoles.pmHrs ?? 15,
+        pmRate: prevRoles.pmRate ?? 180,
         advisorHrs: prevRoles.advisorHrs ?? 20,
+        advisorRate: prevRoles.advisorRate ?? 195,
         saHrs: prevRoles.saHrs ?? 25,
+        saRate: prevRoles.saRate ?? 120,
         cdqHrs: prevRoles.cdqHrs ?? 10,
+        cdqRate: prevRoles.cdqRate ?? 60,
         mdmDevs: prevRoles.mdmDevs ?? baseCalc.mdmDevs,
+        mdmDevRate: prevRoles.mdmDevRate ?? 60,
         intgArchHrs: prevRoles.intgArchHrs ?? baseCalc.intgArchHrsPW,
+        intgArchRate: prevRoles.intgArchRate ?? 120,
         cdiDevs: prevRoles.cdiDevs ?? baseCalc.cdiDevs,
+        cdiDevRate: prevRoles.cdiDevRate ?? 60,
       };
 
       rv.contingency = item.contingency_pct != null ? item.contingency_pct : 20;
@@ -533,11 +545,54 @@
       if (e.target === document.getElementById('review-overlay')) closeReview();
     }
 
+    function rvResetSchedule() {
+      const baseCalc = calcFromInputs(rv.inp, rv.type);
+      rv.schedule = {
+        reqWks: baseCalc.reqWks,
+        designWks: baseCalc.designWks,
+        buildWks: baseCalc.buildWks,
+        integWks: baseCalc.integWks,
+        uatWks: baseCalc.uatWks,
+        parallelWks: baseCalc.parallelWks,
+        cutoverWks: baseCalc.cutoverWks,
+        buildDesignOverlap: baseCalc.buildDesignOverlap,
+        integBuildOverlap: baseCalc.integBuildOverlap,
+      };
+      renderReviewInputs();
+      updateReviewResult();
+    }
+
+    function rvResetRoles() {
+      const baseCalc = calcFromInputs(rv.inp, rv.type);
+      rv.roles = {
+        pmHrs: 15,
+        pmRate: 180,
+        advisorHrs: 20,
+        advisorRate: 195,
+        saHrs: 25,
+        saRate: 120,
+        cdqHrs: 10,
+        cdqRate: 60,
+        mdmDevs: baseCalc.mdmDevs,
+        mdmDevRate: 60,
+        intgArchHrs: baseCalc.intgArchHrsPW,
+        intgArchRate: 120,
+        cdiDevs: baseCalc.cdiDevs,
+        cdiDevRate: 60,
+      };
+      renderReviewInputs();
+      updateReviewResult();
+    }
+
     function renderReviewInputs() {
       const isMod = rv.type === 'modernization';
       const inp = rv.inp;
       const sch = rv.schedule;
       const rls = rv.roles;
+      const baseCalc = calcFromInputs(inp, rv.type);
+      const res = calcFromScheduleAndRoles(sch, rls, rv.contingency, baseCalc.risk);
+      const costs = res.costs;
+      const fmtCost = n => '$' + Math.round(n || 0).toLocaleString('en-US');
 
       const ootbPills = (inp.ootb && inp.ootb.length)
         ? inp.ootb.map(o => `<span class="pill" style="display:inline-block;padding:2px 8px;background:#e2e8f0;border-radius:12px;font-size:8.5pt;margin:2px;">${o}</span>`).join('')
@@ -567,51 +622,120 @@
         </div>
       `;
 
-      // INTERACTIVE SCHEDULE PHASE & OVERLAP ADJUSTER (Excel C4:C11, D4:D11)
+      // INTERACTIVE SCHEDULE PHASE & OVERLAP TABLE (Matching Excel Sheet)
       h += `
         <div class="rv-section" style="border:1.5px solid #17324d;padding:12px 14px;border-radius:8px;margin-bottom:14px;background:#ffffff;">
-          <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin-bottom:10px;">
-            📅 Schedule Phase &amp; Overlap Adjuster (Weeks)
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin:0;">
+              📅 Schedule Phase &amp; Overlap Adjuster (Weeks)
+            </div>
+            <button type="button" onclick="rvResetSchedule()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:3px 8px;font-size:8pt;cursor:pointer;color:#334155;font-weight:600;">
+              ↺ Reset Schedule
+            </button>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-            <div class="rv-row"><label>Requirements Phase (wks)</label><input type="number" id="sch-reqWks" min="1" max="12" value="${sch.reqWks}" oninput="rvSchedSet('reqWks',+this.value)"></div>
-            <div class="rv-row"><label>Design Phase (wks)</label><input type="number" id="sch-designWks" min="1" max="12" value="${sch.designWks}" oninput="rvSchedSet('designWks',+this.value)"></div>
-            <div class="rv-row"><label>Build &amp; Unit Test (wks)</label><input type="number" id="sch-buildWks" min="1" max="30" value="${sch.buildWks}" oninput="rvSchedSet('buildWks',+this.value)"></div>
-            <div class="rv-row"><label>Integration Test (wks)</label><input type="number" id="sch-integWks" min="1" max="12" value="${sch.integWks}" oninput="rvSchedSet('integWks',+this.value)"></div>
-            <div class="rv-row"><label>UAT Testing (wks)</label><input type="number" id="sch-uatWks" min="1" max="12" value="${sch.uatWks}" oninput="rvSchedSet('uatWks',+this.value)"></div>
-            ${isMod ? `<div class="rv-row"><label>Parallel Testing (wks)</label><input type="number" id="sch-parallelWks" min="0" max="16" value="${sch.parallelWks}" oninput="rvSchedSet('parallelWks',+this.value)"></div>` : ''}
-            <div class="rv-row"><label>Cutover / Training (wks)</label><input type="number" id="sch-cutoverWks" min="1" max="6" value="${sch.cutoverWks}" oninput="rvSchedSet('cutoverWks',+this.value)"></div>
-            <div class="rv-row"><label>Build/Design Overlap (wks)</label><input type="number" id="sch-buildDesignOverlap" min="0" max="4" value="${sch.buildDesignOverlap}" oninput="rvSchedSet('buildDesignOverlap',+this.value)"></div>
-            <div class="rv-row"><label>Integ/Build Overlap (wks)</label><input type="number" id="sch-integBuildOverlap" min="0" max="4" value="${sch.integBuildOverlap}" oninput="rvSchedSet('integBuildOverlap',+this.value)"></div>
-          </div>
+          <table style="width:100%;font-size:8.5pt;border-collapse:collapse;margin-bottom:4px;">
+            <thead>
+              <tr style="background:#f1f5f9;text-align:left;border-bottom:1px solid #cbd5e1;color:#17324d;">
+                <th style="padding:5px 6px;">Phase Name</th>
+                <th style="padding:5px 6px;text-align:center;">Duration (Wks)</th>
+                <th style="padding:5px 6px;text-align:center;">Overlap (Wks)</th>
+                <th style="padding:5px 6px;text-align:center;">Net Active Wks</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Discovery / Requirements</td>
+                <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.reqWks}" oninput="rvSchedSet('reqWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;color:#94a3b8;">—</td>
+                <td style="text-align:center;font-weight:600;">${sch.reqWks}</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Architecture &amp; Design</td>
+                <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.designWks}" oninput="rvSchedSet('designWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;color:#94a3b8;">—</td>
+                <td style="text-align:center;font-weight:600;">${sch.designWks}</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Build &amp; Unit Test</td>
+                <td style="text-align:center;"><input type="number" min="1" max="30" value="${sch.buildWks}" oninput="rvSchedSet('buildWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.buildDesignOverlap}" oninput="rvSchedSet('buildDesignOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.buildWks - sch.buildDesignOverlap)}</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Integration Testing</td>
+                <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.integWks}" oninput="rvSchedSet('integWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;"><input type="number" min="0" max="4" value="${sch.integBuildOverlap}" oninput="rvSchedSet('integBuildOverlap',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;font-weight:600;">${Math.max(0, sch.integWks - sch.integBuildOverlap)}</td>
+              </tr>
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">UAT Testing</td>
+                <td style="text-align:center;"><input type="number" min="1" max="12" value="${sch.uatWks}" oninput="rvSchedSet('uatWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;color:#94a3b8;">—</td>
+                <td style="text-align:center;font-weight:600;">${sch.uatWks}</td>
+              </tr>
+              ${isMod ? `
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Parallel Testing</td>
+                <td style="text-align:center;"><input type="number" min="0" max="16" value="${sch.parallelWks}" oninput="rvSchedSet('parallelWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;color:#94a3b8;">—</td>
+                <td style="text-align:center;font-weight:600;">${sch.parallelWks}</td>
+              </tr>` : ''}
+              <tr>
+                <td style="padding:5px 6px;font-weight:500;">Cutover &amp; Training</td>
+                <td style="text-align:center;"><input type="number" min="1" max="6" value="${sch.cutoverWks}" oninput="rvSchedSet('cutoverWks',+this.value)" style="width:50px;text-align:center;"></td>
+                <td style="text-align:center;color:#94a3b8;">—</td>
+                <td style="text-align:center;font-weight:600;">${sch.cutoverWks}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr style="border-top:1.5px solid #cbd5e1;background:#f8fafc;font-weight:700;">
+                <td style="padding:6px;">Net Delivery Timeline</td>
+                <td style="padding:6px;text-align:center;">${res.totalPhaseWks} wks</td>
+                <td style="padding:6px;text-align:center;color:#e4622a;">-${res.totalOverlaps} wks</td>
+                <td style="padding:6px;text-align:center;color:#c9531f;">${res.netWks} wks</td>
+              </tr>
+            </tfoot>
+          </table>
         </div>
       `;
 
-      // INTERACTIVE ROLE ALLOCATION & RATE MATRIX (Excel AL14:AO26)
+      // INTERACTIVE ROLE ALLOCATION & EDITABLE RATES MATRIX (Excel AL14:AO26)
       h += `
         <div class="rv-section" style="border:1.5px solid #17324d;padding:12px 14px;border-radius:8px;background:#ffffff;">
-          <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin-bottom:10px;">
-            👥 Role Allocations &amp; Resource Rates
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div class="rv-label" style="color:#17324d;font-weight:700;font-size:9.5pt;margin:0;">
+              👥 Role Allocations &amp; Resource Rates
+            </div>
+            <button type="button" onclick="rvResetRoles()" style="background:#f1f5f9;border:1px solid #cbd5e1;border-radius:4px;padding:3px 8px;font-size:8pt;cursor:pointer;color:#334155;font-weight:600;">
+              ↺ Reset Roles &amp; Rates
+            </button>
           </div>
 
           <table style="width:100%;font-size:8.5pt;border-collapse:collapse;" class="rv-role-table">
             <thead>
-              <tr style="background:#f1f5f9;text-align:left;border-bottom:1px solid #cbd5e1;">
-                <th style="padding:4px 6px;">Role Name</th>
-                <th style="padding:4px 6px;">Weekly Hrs / Dev Count</th>
-                <th style="padding:4px 6px;">Rate ($/hr)</th>
+              <tr style="background:#f1f5f9;text-align:left;border-bottom:1px solid #cbd5e1;color:#17324d;">
+                <th style="padding:5px 6px;">Role Name</th>
+                <th style="padding:5px 6px;">Weekly Hrs / Count</th>
+                <th style="padding:5px 6px;">Rate ($/hr)</th>
+                <th style="padding:5px 6px;text-align:right;">Subtotal Cost</th>
               </tr>
             </thead>
             <tbody>
-              <tr><td style="padding:4px 6px;">Project Manager</td><td><input type="number" min="0" max="40" value="${rls.pmHrs}" oninput="rvRoleSet('pmHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$180</td></tr>
-              <tr><td style="padding:4px 6px;">MDM Advisor</td><td><input type="number" min="0" max="40" value="${rls.advisorHrs}" oninput="rvRoleSet('advisorHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$195</td></tr>
-              <tr><td style="padding:4px 6px;">Solution Architect</td><td><input type="number" min="0" max="40" value="${rls.saHrs}" oninput="rvRoleSet('saHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$120</td></tr>
-              <tr><td style="padding:4px 6px;">CDQ Specialist</td><td><input type="number" min="0" max="40" value="${rls.cdqHrs}" oninput="rvRoleSet('cdqHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$60</td></tr>
-              <tr><td style="padding:4px 6px;">MDM Developers</td><td><input type="number" min="1" max="8" value="${rls.mdmDevs}" oninput="rvRoleSet('mdmDevs',+this.value)" style="width:55px;"> dev(s)</td><td>$60 (20h/ea)</td></tr>
-              <tr><td style="padding:4px 6px;">Integration Architect</td><td><input type="number" min="0" max="40" value="${rls.intgArchHrs}" oninput="rvRoleSet('intgArchHrs',+this.value)" style="width:55px;"> hrs/wk</td><td>$120</td></tr>
-              <tr><td style="padding:4px 6px;">CDI / CAI Developers</td><td><input type="number" min="1" max="8" value="${rls.cdiDevs}" oninput="rvRoleSet('cdiDevs',+this.value)" style="width:55px;"> dev(s)</td><td>$60 (28h/ea)</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">Project Manager</td><td><input type="number" min="0" max="40" value="${rls.pmHrs}" oninput="rvRoleSet('pmHrs',+this.value)" style="width:50px;"> hrs/wk</td><td>$<input type="number" min="0" max="500" value="${rls.pmRate}" oninput="rvRoleSet('pmRate',+this.value)" style="width:55px;"></td><td style="text-align:right;font-weight:600;">${fmtCost(costs.pmCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">MDM Advisor</td><td><input type="number" min="0" max="40" value="${rls.advisorHrs}" oninput="rvRoleSet('advisorHrs',+this.value)" style="width:50px;"> hrs/wk</td><td>$<input type="number" min="0" max="500" value="${rls.advisorRate}" oninput="rvRoleSet('advisorRate',+this.value)" style="width:55px;"></td><td style="text-align:right;font-weight:600;">${fmtCost(costs.advCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">Solution Architect</td><td><input type="number" min="0" max="40" value="${rls.saHrs}" oninput="rvRoleSet('saHrs',+this.value)" style="width:50px;"> hrs/wk</td><td>$<input type="number" min="0" max="500" value="${rls.saRate}" oninput="rvRoleSet('saRate',+this.value)" style="width:55px;"></td><td style="text-align:right;font-weight:600;">${fmtCost(costs.saCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">CDQ Specialist</td><td><input type="number" min="0" max="40" value="${rls.cdqHrs}" oninput="rvRoleSet('cdqHrs',+this.value)" style="width:50px;"> hrs/wk</td><td>$<input type="number" min="0" max="500" value="${rls.cdqRate}" oninput="rvRoleSet('cdqRate',+this.value)" style="width:55px;"></td><td style="text-align:right;font-weight:600;">${fmtCost(costs.cdqCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">MDM Developers</td><td><input type="number" min="1" max="8" value="${rls.mdmDevs}" oninput="rvRoleSet('mdmDevs',+this.value)" style="width:50px;"> dev(s)</td><td>$<input type="number" min="0" max="500" value="${rls.mdmDevRate}" oninput="rvRoleSet('mdmDevRate',+this.value)" style="width:55px;"> (20h/ea)</td><td style="text-align:right;font-weight:600;">${fmtCost(costs.mdmCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">Integration Architect</td><td><input type="number" min="0" max="40" value="${rls.intgArchHrs}" oninput="rvRoleSet('intgArchHrs',+this.value)" style="width:50px;"> hrs/wk</td><td>$<input type="number" min="0" max="500" value="${rls.intgArchRate}" oninput="rvRoleSet('intgArchRate',+this.value)" style="width:55px;"></td><td style="text-align:right;font-weight:600;">${fmtCost(costs.intgCost)}</td></tr>
+              <tr><td style="padding:5px 6px;font-weight:500;">CDI / CAI Developers</td><td><input type="number" min="1" max="8" value="${rls.cdiDevs}" oninput="rvRoleSet('cdiDevs',+this.value)" style="width:50px;"> dev(s)</td><td>$<input type="number" min="0" max="500" value="${rls.cdiDevRate}" oninput="rvRoleSet('cdiDevRate',+this.value)" style="width:55px;"> (28h/ea)</td><td style="text-align:right;font-weight:600;">${fmtCost(costs.cdiCost)}</td></tr>
             </tbody>
+            <tfoot>
+              <tr style="border-top:1.5px solid #cbd5e1;background:#f8fafc;font-weight:700;">
+                <td colspan="3" style="padding:6px;">Total T&amp;M Base Labor Cost</td>
+                <td style="padding:6px;text-align:right;color:#17324d;">${fmtCost(costs.rawCost)}</td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       `;
